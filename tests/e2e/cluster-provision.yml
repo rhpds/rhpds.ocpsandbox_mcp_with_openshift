@@ -12,9 +12,12 @@
   gather_facts: false
   become: false
 
+  environment:
+    K8S_AUTH_KUBECONFIG: "{{ playbook_dir }}/output/kubeconfig"
+
   vars:
     ACTION: provision
-    guid: 8sjjl
+    guid: x2r6h
     output_dir: "{{ playbook_dir }}/output"
 
     # ---------------------------------------------------------------

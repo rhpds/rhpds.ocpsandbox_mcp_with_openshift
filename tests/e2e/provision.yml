@@ -20,7 +20,7 @@
 
   vars:
     ACTION: provision
-    guid: 8sjjl
+    guid: x2r6h
     output_dir: "{{ playbook_dir }}/output"
 
     # ---------------------------------------------------------------
