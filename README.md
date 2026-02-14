@@ -27,7 +27,9 @@ Deploys shared infrastructure on a fresh OCP cluster. No per-user resources.
 Playbook: `tests/e2e/provision.yml`
 AgV catalog: `agd_v2/mcp-with-openshift-sandbox/common.yaml`
 
-Deploys per-user resources via `config: namespace` pattern.
+Deploys per-user resources via `config: namespace` pattern. Each role's `main.yml` dispatches to `workload.yml` (provision) or `remove_workload.yml` (destroy) based on the `ACTION` variable.
+
+**Provision order (`workloads`):**
 
 | Step | Role | What It Does |
 |------|------|-------------|
@@ -38,6 +40,8 @@ Deploys per-user resources via `config: namespace` pattern.
 | 5 | `rhpds.ocpsandbox_mcp_with_openshift.ocp4_workload_ocpsandbox_mcp_user` | MCP servers + LibreChat + Agent |
 | 6 | `agnosticd.showroom.ocp4_workload_showroom_ocp_integration` | Console links |
 | 7 | `agnosticd.showroom.ocp4_workload_showroom` | Showroom lab content |
+
+**Destroy order (`remove_workloads`):** reverse of above -- Showroom first, keycloak_user last.
 
 ## Roles in This Collection
 
