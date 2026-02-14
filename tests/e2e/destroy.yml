@@ -1,0 +1,144 @@
+---
+# End-to-end test: Destroy all per-user resources (reverse order of provision)
+#
+# Usage:
+#   ANSIBLE_COLLECTIONS_PATH="$HOME/work/code/ansible_collections:$HOME/.ansible/collections" \
+#   ANSIBLE_ROLES_PATH="$HOME/work/code/agnosticd-v2/ansible/roles" \
+#   ~/work/ansible-for-me/bin/ansible-playbook tests/e2e/destroy.yml -v
+
+- name: "E2E Test: Destroy MCP with OpenShift User Resources"
+  hosts: localhost
+  gather_facts: false
+  become: false
+
+  vars:
+    ACTION: destroy
+    guid: 8sjjl
+    output_dir: "{{ playbook_dir }}/output"
+
+    # ---------------------------------------------------------------
+    # Cluster connection
+    # ---------------------------------------------------------------
+    sandbox_openshift_api_url: "https://api.cluster-{{ guid }}.dynamic.redhatworkshops.io:6443"
+    cluster_admin_agnosticd_sa_token: REDACTED_SA_TOKEN
+
+    # ---------------------------------------------------------------
+    # Common
+    # ---------------------------------------------------------------
+    common_password: "{{ (guid[:5] | hash('md5') | int(base=16) | b64encode)[:8] }}"
+    test_username: "user1-{{ guid }}"
+
+    # ---------------------------------------------------------------
+    # Keycloak user
+    # ---------------------------------------------------------------
+    ocp4_workload_ocpsandbox_keycloak_user_username: "{{ test_username }}"
+    ocp4_workload_ocpsandbox_keycloak_user_password: "{{ common_password }}"
+    ocp4_workload_ocpsandbox_keycloak_user_keycloak_realm: sso
+
+    # ---------------------------------------------------------------
+    # Gitea user
+    # ---------------------------------------------------------------
+    ocp4_workload_ocpsandbox_gitea_user_username: "{{ test_username }}"
+    ocp4_workload_ocpsandbox_gitea_user_password: "{{ common_password }}"
+    ocp4_workload_ocpsandbox_gitea_user_repositories:
+    - name: mcp
+      repo: https://github.com/rhpds/ocpsandbox-mcp-with-openshift-gitops
+      private: false
+
+    # ---------------------------------------------------------------
+    # ArgoCD
+    # ---------------------------------------------------------------
+    ocp4_workload_ocpsandbox_argocd_user_username: "{{ test_username }}"
+
+    # ---------------------------------------------------------------
+    # LiteLLM
+    # ---------------------------------------------------------------
+    litellm_url: "https://litellm-prod.apps.maas.redhatworkshops.io"
+    litellm_master_key: "REDACTED_LITELLM_KEY"
+    ocp4_workload_litellm_virtual_keys_multi_user: false
+    ocp4_workload_litellm_virtual_keys_user_count: 1
+    ocp4_workload_litellm_virtual_keys_verify_ssl: true
+
+    # ---------------------------------------------------------------
+    # MCP user (sandbox role)
+    # ---------------------------------------------------------------
+    ocp4_workload_ocpsandbox_mcp_user_username: "{{ test_username }}"
+    ocp4_workload_ocpsandbox_mcp_user_gitea_user_password: "{{ common_password }}"
+    ocp4_workload_ocpsandbox_mcp_user_librechat_password: "{{ common_password }}"
+    ocp4_workload_ocpsandbox_mcp_user_metrics_enable: false
+    ocp4_workload_ocpsandbox_mcp_user_cloud_native_postgresql_operator_enable: false
+    # litemaas vars not needed for destroy but set to avoid undefined errors
+    ocp4_workload_ocpsandbox_mcp_user_litemaas_url: "https://litellm.apps.maas.redhatworkshops.io/v1"
+    ocp4_workload_ocpsandbox_mcp_user_litemaas_key: "dummy"
+    ocp4_workload_ocpsandbox_mcp_user_litemaas_models: ["dummy"]
+
+    # ---------------------------------------------------------------
+    # Showroom
+    # ---------------------------------------------------------------
+    ocp4_workload_showroom_content_git_repo: https://github.com/rhpds/lb1726-mcp-showroom
+    ocp4_workload_showroom_content_git_repo_ref: main
+    ocp4_workload_showroom_content_only: true
+
+  tasks:
+  # Destroy in reverse order of provision
+
+  # ===================================================================
+  # Step 1: Showroom
+  # ===================================================================
+  - name: "Step 1: Destroy Showroom"
+    ansible.builtin.include_role:
+      name: agnosticd.showroom.ocp4_workload_showroom
+    ignore_errors: true
+
+  - name: "Step 1b: Destroy Showroom OCP integration"
+    ansible.builtin.include_role:
+      name: agnosticd.showroom.ocp4_workload_showroom_ocp_integration
+    ignore_errors: true
+
+  # ===================================================================
+  # Step 2: MCP user (ApplicationSets, Applications, namespaces, SCC)
+  # ===================================================================
+  - name: "Step 2: Destroy MCP user components"
+    ansible.builtin.include_role:
+      name: rhpds.ocpsandbox_mcp_with_openshift.ocp4_workload_ocpsandbox_mcp_user
+
+  # ===================================================================
+  # Step 3: LiteLLM virtual key
+  # ===================================================================
+  - name: "Step 3: Delete LiteLLM virtual key"
+    ansible.builtin.include_role:
+      name: rhpds.litellm_virtual_keys.ocp4_workload_litellm_virtual_keys
+    ignore_errors: true
+
+  # ===================================================================
+  # Step 4: ArgoCD AppProject
+  # ===================================================================
+  - name: "Step 4: Delete ArgoCD AppProject"
+    ansible.builtin.include_role:
+      name: agnosticd.namespaced_workloads.ocp4_workload_ocpsandbox_argocd_user
+
+  # ===================================================================
+  # Step 5: Gitea user
+  # ===================================================================
+  - name: "Step 5: Delete Gitea user"
+    ansible.builtin.include_role:
+      name: agnosticd.namespaced_workloads.ocp4_workload_ocpsandbox_gitea_user
+
+  # ===================================================================
+  # Step 6: Keycloak user + cleanup
+  # ===================================================================
+  - name: "Step 6: Delete Keycloak user and clean up"
+    ansible.builtin.include_role:
+      name: agnosticd.namespaced_workloads.ocp4_workload_ocpsandbox_keycloak_user
+
+  # ===================================================================
+  # Clean up output
+  # ===================================================================
+  - name: Remove test output directory
+    ansible.builtin.file:
+      path: "{{ output_dir }}"
+      state: absent
+
+  - name: "E2E Destroy Complete"
+    ansible.builtin.debug:
+      msg: "All per-user resources for {{ test_username }} have been removed."

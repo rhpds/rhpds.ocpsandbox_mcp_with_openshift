@@ -1,0 +1,89 @@
+---
+- name: Set user variable shorthand
+  ansible.builtin.set_fact:
+    _ocpsandbox_mcp_user: "{{ ocp4_workload_ocpsandbox_mcp_user_username }}"
+
+# ------------------------------------------------------------------
+# Delete Gitea API token
+# ------------------------------------------------------------------
+- name: Delete Gitea API token
+  ansible.builtin.uri:
+    url: >-
+      {{ ocp4_workload_ocpsandbox_mcp_user_gitea_external_url }}/api/v1/users/{{ _ocpsandbox_mcp_user }}/tokens/{{ ocp4_workload_ocpsandbox_mcp_user_gitea_repository }}
+    method: DELETE
+    status_code: [204, 404, 422]
+    user: "{{ _ocpsandbox_mcp_user }}"
+    password: "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_user_password }}"
+    force_basic_auth: true
+    validate_certs: true
+  ignore_errors: true
+
+# ------------------------------------------------------------------
+# Delete ApplicationSets (cascades to Applications and namespaces)
+# ------------------------------------------------------------------
+- name: Delete ApplicationSets
+  kubernetes.core.k8s:
+    api_version: argoproj.io/v1alpha1
+    kind: ApplicationSet
+    name: "{{ item }}"
+    namespace: openshift-gitops
+    state: absent
+  loop:
+  - agent
+  - librechat
+  - librechat-config
+  - mcp-gitea
+  - mcp-openshift
+
+# ------------------------------------------------------------------
+# Wait for ArgoCD Applications to be removed
+# ------------------------------------------------------------------
+- name: Set expected Application names
+  ansible.builtin.set_fact:
+    _ocpsandbox_mcp_expected_apps:
+    - "agent-{{ _ocpsandbox_mcp_user }}"
+    - "{{ ocp4_workload_ocpsandbox_mcp_user_librechat_namespace_base }}-{{ _ocpsandbox_mcp_user }}"
+    - "librechat-config-{{ _ocpsandbox_mcp_user }}"
+    - "mcp-gitea-{{ _ocpsandbox_mcp_user }}"
+    - "mcp-openshift-{{ _ocpsandbox_mcp_user }}"
+
+- name: Wait for Applications to be deleted
+  kubernetes.core.k8s_info:
+    api_version: argoproj.io/v1alpha1
+    kind: Application
+    namespace: openshift-gitops
+  register: r_apps
+  until: >-
+    r_apps.resources
+    | map(attribute='metadata.name')
+    | intersect(_ocpsandbox_mcp_expected_apps)
+    | length == 0
+  retries: 30
+  delay: 10
+
+# ------------------------------------------------------------------
+# Clean up namespaces (in case ArgoCD didn't remove them)
+# ------------------------------------------------------------------
+- name: Delete user namespaces
+  kubernetes.core.k8s:
+    api_version: v1
+    kind: Namespace
+    name: "{{ item }}"
+    state: absent
+  loop:
+  - "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_namespace_base }}-{{ _ocpsandbox_mcp_user }}"
+  - "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_namespace_base }}-{{ _ocpsandbox_mcp_user }}"
+  - "{{ ocp4_workload_ocpsandbox_mcp_user_librechat_namespace_base }}-{{ _ocpsandbox_mcp_user }}"
+  - "{{ ocp4_workload_ocpsandbox_mcp_user_agent_namespace_base }}-{{ _ocpsandbox_mcp_user }}"
+  ignore_errors: true
+
+# ------------------------------------------------------------------
+# Delete SCC
+# ------------------------------------------------------------------
+- name: Delete SCC
+  kubernetes.core.k8s:
+    api_version: security.openshift.io/v1
+    kind: SecurityContextConstraints
+    name: mcpserver-scc
+    state: absent
+  ignore_errors: true

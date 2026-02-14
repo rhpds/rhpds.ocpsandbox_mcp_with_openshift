@@ -1,0 +1,61 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: agent
+  namespace: openshift-gitops
+spec:
+  syncPolicy:
+    preserveResourcesOnDeletion: false
+  generators:
+  - list:
+      elements:
+      - user: {{ _ocpsandbox_mcp_user }}
+        litemaas_key: {{ ocp4_workload_ocpsandbox_mcp_user_litemaas_key }}
+  template:
+    metadata:
+      name: "agent-{% raw %}{{ user }}{% endraw %}"
+      namespace: openshift-gitops
+      finalizers:
+      - resources-finalizer.argocd.argoproj.io
+    spec:
+      destination:
+        name: ""
+        namespace: "{{ ocp4_workload_ocpsandbox_mcp_user_agent_namespace_base }}-{% raw %}{{ user }}{% endraw %}"
+        server: https://kubernetes.default.svc
+      project: {{ ocp4_workload_ocpsandbox_mcp_user_argocd_project }}
+      syncPolicy:
+        syncOptions:
+        - CreateNamespace=true
+        automated:
+          prune: true
+          selfHeal: false
+      source:
+        repoURL: "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_internal_url }}/{% raw %}{{ user }}{% endraw %}/{{ ocp4_workload_ocpsandbox_mcp_user_gitea_repository }}"
+        path: {{ ocp4_workload_ocpsandbox_mcp_user_agent_repo_path }}
+        targetRevision: {{ ocp4_workload_ocpsandbox_mcp_user_gitops_repo_tag }}
+        helm:
+          values: |
+            fullnameOverride: agent
+
+            user: "{% raw %}{{ user }}{% endraw %}"
+            application_name: agent
+            namespace: "{{ ocp4_workload_ocpsandbox_mcp_user_agent_namespace_base }}-{% raw %}{{ user }}{% endraw %}"
+
+            git_url: "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_internal_url }}/{% raw %}{{ user }}{% endraw %}/mcp.git"
+            git_revision: main
+            git_subdirectory: agent
+            agent_endpoint: "http://agent.{{ ocp4_workload_ocpsandbox_mcp_user_agent_namespace_base }}-{% raw %}{{ user }}{% endraw %}.svc:8000/report-failure"
+
+            # Agent Configuration
+            agentConfig:
+              litellm_url: {{ ocp4_workload_ocpsandbox_mcp_user_litemaas_url }}
+              litellm_api_key: "{% raw %}{{ litemaas_key }}{% endraw %}"
+              litellm_model: {{ ocp4_workload_ocpsandbox_mcp_user_agent_model_name }}
+              mcp_openshift_url: "http://mcp-openshift-proxy.{{ ocp4_workload_ocpsandbox_mcp_user_openshift_namespace_base }}-{% raw %}{{ user }}{% endraw %}.svc.cluster.local:8080/sse#openshift"
+              mcp_openshift_transport: sse
+              mcp_gitea_url: "http://mcp-gitea-proxy.{{ ocp4_workload_ocpsandbox_mcp_user_gitea_namespace_base }}-{% raw %}{{ user }}{% endraw %}.svc.cluster.local:8080/mcp"
+              mcp_gitea_user: "{% raw %}{{ user }}{% endraw %}"
+              mcp_gitea_repo: {{ ocp4_workload_ocpsandbox_mcp_user_gitea_repository }}
+              mcp_gitea_transport: streamable-http
+              port: 8000

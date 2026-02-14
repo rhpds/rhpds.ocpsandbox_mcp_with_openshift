@@ -1,0 +1,42 @@
+---
+apiVersion: security.openshift.io/v1
+kind: SecurityContextConstraints
+metadata:
+  name: mcpserver-scc
+allowHostDirVolumePlugin: false
+allowHostIPC: false
+allowHostNetwork: false
+allowHostPID: false
+allowHostPorts: false
+allowPrivilegedContainer: false
+allowedCapabilities: null
+defaultAddCapabilities: null
+fsGroup:
+  type: RunAsAny
+groups: []
+priority: null
+readOnlyRootFilesystem: true
+requiredDropCapabilities:
+- KILL
+- MKNOD
+- SETUID
+- SETGID
+runAsUser:
+  type: MustRunAs
+  uid: 1000
+seLinuxContext:
+  type: MustRunAs
+supplementalGroups:
+  type: RunAsAny
+users:
+- system:serviceaccount:{{ ocp4_workload_ocpsandbox_mcp_user_openshift_namespace_base }}-{{ _ocpsandbox_mcp_user }}:openshift-sa
+- system:serviceaccount:{{ ocp4_workload_ocpsandbox_mcp_user_openshift_namespace_base }}-{{ _ocpsandbox_mcp_user }}:openshift-proxy-runner
+- system:serviceaccount:{{ ocp4_workload_ocpsandbox_mcp_user_gitea_namespace_base }}-{{ _ocpsandbox_mcp_user }}:gitea-sa
+- system:serviceaccount:{{ ocp4_workload_ocpsandbox_mcp_user_gitea_namespace_base }}-{{ _ocpsandbox_mcp_user }}:gitea-proxy-runner
+volumes:
+- configMap
+- downwardAPI
+- emptyDir
+- persistentVolumeClaim
+- projected
+- secret

@@ -1,0 +1,45 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: mcp-gitea
+  namespace: openshift-gitops
+spec:
+  syncPolicy:
+    preserveResourcesOnDeletion: false
+  generators:
+  - list:
+      elements:
+      - user: {{ _ocpsandbox_mcp_user }}
+        token: {{ _ocpsandbox_mcp_gitea_token }}
+  template:
+    metadata:
+      name: "mcp-gitea-{% raw %}{{ user }}{% endraw %}"
+      namespace: openshift-gitops
+      finalizers:
+      - resources-finalizer.argocd.argoproj.io
+    spec:
+      destination:
+        name: ""
+        namespace: "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_namespace_base }}-{% raw %}{{ user }}{% endraw %}"
+        server: https://kubernetes.default.svc
+      project: {{ ocp4_workload_ocpsandbox_mcp_user_argocd_project }}
+      syncPolicy:
+        syncOptions:
+        - CreateNamespace=true
+        automated:
+          prune: true
+          selfHeal: false
+      source:
+        repoURL: "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_internal_url }}/{% raw %}{{ user }}{% endraw %}/{{ ocp4_workload_ocpsandbox_mcp_user_gitea_repository }}"
+        path: {{ ocp4_workload_ocpsandbox_mcp_user_gitea_repo_path }}
+        targetRevision: {{ ocp4_workload_ocpsandbox_mcp_user_gitops_repo_tag }}
+        helm:
+          values: |
+            fullnameOverride: mcp-gitea
+            user: "{% raw %}{{ user }}{% endraw %}"
+            namespace: "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_namespace_base }}-{% raw %}{{ user }}{% endraw %}"
+            image: {{ ocp4_workload_ocpsandbox_mcp_user_gitea_image }}
+            giteaConfig:
+                url: {{ ocp4_workload_ocpsandbox_mcp_user_gitea_internal_url }}
+                token: "{% raw %}{{ token }}{% endraw %}"

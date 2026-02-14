@@ -1,0 +1,22 @@
+---
+namespace: rhpds
+name: ocpsandbox_mcp_with_openshift
+version: 1.0.0
+readme: README.md
+authors:
+- Wolfgang Kulhanek <wkulhane@redhat.com>
+- Prakhar Srivastava <psrivast@redhat.com>
+description: Ansible collection for MCP with OpenShift lab (OcpSandbox deployment)
+license:
+- GPL-2.0-or-later
+license_file: ''
+tags:
+- openshift
+- mcp
+- sandbox
+dependencies: {}
+repository: https://github.com/rhpds/rhpds.ocpsandbox_mcp_with_openshift
+documentation: https://github.com/rhpds/rhpds.ocpsandbox_mcp_with_openshift
+homepage: https://github.com/rhpds/rhpds.ocpsandbox_mcp_with_openshift
+issues: https://github.com/rhpds/rhpds.ocpsandbox_mcp_with_openshift/issues
+build_ignore: []

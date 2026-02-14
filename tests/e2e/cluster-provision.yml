@@ -1,0 +1,281 @@
+---
+# Cluster provisioner: Deploy shared infra on a fresh OCP cluster
+#
+# Deploys: Keycloak, Gitea, Pipelines, ArgoCD, ToolHive
+# No per-user resources -- those are handled by provision.yml
+#
+# Usage:
+#   ./run.sh cluster-provision -v
+
+- name: "Cluster Setup: Deploy shared infrastructure"
+  hosts: localhost
+  gather_facts: false
+  become: false
+
+  vars:
+    ACTION: provision
+    guid: 8sjjl
+    output_dir: "{{ playbook_dir }}/output"
+
+    # ---------------------------------------------------------------
+    # Cluster connection
+    # ---------------------------------------------------------------
+    sandbox_openshift_api_url: "https://api.cluster-{{ guid }}.dynamic.redhatworkshops.io:6443"
+    cluster_admin_agnosticd_sa_token: REDACTED_SA_TOKEN
+
+    common_password: "{{ (guid[:5] | hash('md5') | int(base=16) | b64encode)[:8] }}"
+
+    # ---------------------------------------------------------------
+    # Keycloak (deploy RHBK + configure as OCP OAuth)
+    # ---------------------------------------------------------------
+    ocp4_workload_authentication_keycloak_realm: openshift
+    ocp4_workload_authentication_keycloak_admin_user: admin
+    ocp4_workload_authentication_keycloak_admin_password: "{{ common_password }}"
+    ocp4_workload_authentication_keycloak_user_count: 0
+    ocp4_workload_authentication_keycloak_remove_kubeadmin: false
+
+    # ---------------------------------------------------------------
+    # Gitea (operator + instance, admin only, no users)
+    # ---------------------------------------------------------------
+    ocp4_workload_gitea_operator_project: gitea
+    ocp4_workload_gitea_operator_catalog_image: quay.io/rhpds/gitea-catalog
+    ocp4_workload_gitea_operator_catalog_image_tag: v2.1.0
+    ocp4_workload_gitea_operator_deploy_gitea_instance: true
+    ocp4_workload_gitea_operator_gitea_image: quay.io/rhpds/gitea
+    ocp4_workload_gitea_operator_gitea_image_tag: "1.25.4"
+    ocp4_workload_gitea_operator_name: gitea
+    ocp4_workload_gitea_operator_gitea_hostname: gitea
+    ocp4_workload_gitea_operator_gitea_volume_size: 5Gi
+    ocp4_workload_gitea_operator_postgresql_image: registry.redhat.io/rhel10/postgresql-16
+    ocp4_workload_gitea_operator_postgresql_image_tag: latest
+    ocp4_workload_gitea_operator_postgresql_volume_size: 5Gi
+    ocp4_workload_gitea_operator_ssl_route: true
+    ocp4_workload_gitea_operator_create_admin: true
+    ocp4_workload_gitea_operator_admin_user: mcpadmin
+    ocp4_workload_gitea_operator_admin_email: mcpadmin@redhat.com
+    ocp4_workload_gitea_operator_admin_password: "{{ common_password }}"
+    ocp4_workload_gitea_operator_create_users: false
+    ocp4_workload_gitea_operator_migrate_repositories: false
+
+    # ---------------------------------------------------------------
+    # OpenShift Pipelines
+    # ---------------------------------------------------------------
+    ocp4_workload_pipelines_channel: pipelines-1.21
+    ocp4_workload_pipelines_use_catalog_snapshot: false
+
+    # ---------------------------------------------------------------
+    # OpenShift GitOps (ArgoCD)
+    # ---------------------------------------------------------------
+    ocp4_workload_openshift_gitops_channel: gitops-1.19
+    ocp4_workload_openshift_gitops_setup_cluster_admin: true
+    ocp4_workload_openshift_gitops_update_route_tls: true
+    ocp4_workload_openshift_gitops_use_catalog_snapshot: false
+    ocp4_workload_openshift_gitops_rbac_update: true
+    ocp4_workload_openshift_gitops_rbac_policy: |
+      g, admin, role:admin
+    ocp4_workload_openshift_gitops_rbac_scopes: '[email,groups]'
+    ocp4_workload_openshift_gitops_controller_update: true
+    ocp4_workload_openshift_gitops_controller_requests_cpu: "2"
+    ocp4_workload_openshift_gitops_controller_requests_memory: 8Gi
+    ocp4_workload_openshift_gitops_controller_limits_cpu: "4"
+    ocp4_workload_openshift_gitops_controller_limits_memory: 8Gi
+    ocp4_workload_openshift_gitops_controller_app_sync: 30s
+    # No per-user access -- handled by ocpsandbox_argocd_user
+    ocp4_workload_openshift_gitops_per_user_access: false
+
+    # ---------------------------------------------------------------
+    # ToolHive (versions from production catalog: agnosticv/agd_v2/mcp-with-openshift/common.yaml)
+    # ---------------------------------------------------------------
+    ocp4_workload_toolhive_helm_chart_crds: oci://ghcr.io/stacklok/toolhive/toolhive-operator-crds:0.0.106
+    ocp4_workload_toolhive_helm_chart_operator: oci://ghcr.io/stacklok/toolhive/toolhive-operator:0.5.28
+    ocp4_workload_toolhive_operator_image: ghcr.io/stacklok/toolhive/operator:v0.8.2-ubi
+    ocp4_workload_toolhive_runner_image: ghcr.io/stacklok/toolhive/proxyrunner:v0.8.2-ubi
+    ocp4_workload_toolhive_registry_api_image: ghcr.io/stacklok/thv-registry-api:v0.5.0-ubi
+
+  tasks:
+  - name: Create output directory
+    ansible.builtin.file:
+      path: "{{ output_dir }}"
+      state: directory
+      mode: "0755"
+
+  # ===================================================================
+  # Step 0: Set up kubeconfig and discover cluster info
+  # ===================================================================
+  - name: Set kubeconfig path
+    ansible.builtin.set_fact:
+      _kubeconfig_path: "{{ lookup('env', 'KUBECONFIG') | default(output_dir ~ '/kubeconfig', true) }}"
+
+  - name: Create kubeconfig directory
+    ansible.builtin.file:
+      path: "{{ _kubeconfig_path | dirname }}"
+      state: directory
+      mode: "0700"
+    when: _kubeconfig_path | dirname != '/tmp' and _kubeconfig_path | dirname != '/private/tmp'
+
+  - name: Write kubeconfig from token
+    ansible.builtin.copy:
+      dest: "{{ _kubeconfig_path }}"
+      mode: "0600"
+      content: |
+        apiVersion: v1
+        kind: Config
+        clusters:
+        - cluster:
+            insecure-skip-tls-verify: true
+            server: {{ sandbox_openshift_api_url }}
+          name: cluster
+        contexts:
+        - context:
+            cluster: cluster
+            user: admin
+          name: cluster
+        current-context: cluster
+        users:
+        - name: admin
+          user:
+            token: {{ cluster_admin_agnosticd_sa_token }}
+
+  - name: Discover cluster ingress domain
+    kubernetes.core.k8s_info:
+      api_version: config.openshift.io/v1
+      kind: Ingress
+      name: cluster
+    register: r_ingress
+
+  - name: Discover cluster console URL
+    kubernetes.core.k8s_info:
+      api_version: config.openshift.io/v1
+      kind: Console
+      name: cluster
+    register: r_console
+
+  - name: Set cluster facts
+    ansible.builtin.set_fact:
+      openshift_cluster_ingress_domain: "{{ r_ingress.resources[0].spec.domain }}"
+      openshift_console_url: "{{ r_console.resources[0].status.consoleURL }}"
+      openshift_api_url: "{{ sandbox_openshift_api_url }}"
+
+  - name: Display cluster info
+    ansible.builtin.debug:
+      msg:
+      - "Ingress: {{ openshift_cluster_ingress_domain }}"
+      - "Console: {{ openshift_console_url }}"
+      - "API: {{ openshift_api_url }}"
+
+  # ===================================================================
+  # Step 1: Keycloak (RHBK operator + OAuth provider)
+  # ===================================================================
+  - name: "Step 1: Deploy Keycloak authentication"
+    ansible.builtin.include_role:
+      name: agnosticd.core_workloads.ocp4_workload_authentication_keycloak
+
+  # ===================================================================
+  # Step 2: Gitea operator + instance (admin only)
+  # ===================================================================
+  - name: "Step 2: Deploy Gitea operator"
+    ansible.builtin.include_role:
+      name: agnosticd.core_workloads.ocp4_workload_gitea_operator
+
+  # ===================================================================
+  # Step 3: OpenShift Pipelines
+  # ===================================================================
+  - name: "Step 3: Deploy OpenShift Pipelines"
+    ansible.builtin.include_role:
+      name: agnosticd.core_workloads.ocp4_workload_pipelines
+
+  # ===================================================================
+  # Step 4: OpenShift GitOps (ArgoCD)
+  # ===================================================================
+  - name: "Step 4: Deploy OpenShift GitOps"
+    ansible.builtin.include_role:
+      name: agnosticd.core_workloads.ocp4_workload_openshift_gitops
+
+  # ===================================================================
+  # Step 5: ToolHive
+  # ===================================================================
+  - name: "Step 5: Deploy ToolHive operator"
+    ansible.builtin.include_role:
+      name: agnosticd.ai_workloads.ocp4_workload_toolhive
+
+  # ===================================================================
+  # Step 6: Enable user workload monitoring (for Module 3 telemetry)
+  # ===================================================================
+  - name: "Step 6: Enable user workload monitoring"
+    kubernetes.core.k8s:
+      state: present
+      definition:
+        apiVersion: v1
+        kind: ConfigMap
+        metadata:
+          name: cluster-monitoring-config
+          namespace: openshift-monitoring
+        data:
+          config.yaml: |
+            enableUserWorkload: true
+
+  - name: "Step 6b: Enable dev perspective in OpenShift console"
+    kubernetes.core.k8s:
+      state: patched
+      api_version: operator.openshift.io/v1
+      kind: Console
+      name: cluster
+      merge_type: merge
+      definition:
+        spec:
+          customization:
+            perspectives:
+            - id: dev
+              visibility:
+                state: Enabled
+
+  # ===================================================================
+  # Step 7: CloudNativePG operator (for Module 4 MCP Registry)
+  # ===================================================================
+  - name: "Step 7: Create CloudNativePG namespace"
+    kubernetes.core.k8s:
+      state: present
+      definition:
+        apiVersion: v1
+        kind: Namespace
+        metadata:
+          name: cloudnative-pg
+
+  - name: "Step 7b: Create CloudNativePG OperatorGroup"
+    kubernetes.core.k8s:
+      state: present
+      definition:
+        apiVersion: operators.coreos.com/v1
+        kind: OperatorGroup
+        metadata:
+          name: cloudnative-pg
+          namespace: cloudnative-pg
+
+  - name: "Step 7c: Create CloudNativePG Subscription"
+    kubernetes.core.k8s:
+      state: present
+      definition:
+        apiVersion: operators.coreos.com/v1alpha1
+        kind: Subscription
+        metadata:
+          name: cloudnative-pg
+          namespace: cloudnative-pg
+        spec:
+          channel: stable-v1
+          installPlanApproval: Automatic
+          name: cloudnative-pg
+          source: certified-operators
+          sourceNamespace: openshift-marketplace
+
+  # ===================================================================
+  # Summary
+  # ===================================================================
+  - name: "Cluster Setup Complete"
+    ansible.builtin.debug:
+      msg:
+      - "Cluster: {{ guid }}"
+      - "Ingress: {{ openshift_cluster_ingress_domain }}"
+      - "Console: {{ openshift_console_url }}"
+      - "Keycloak: https://keycloak-keycloak.{{ openshift_cluster_ingress_domain }}"
+      - "Gitea: https://gitea.{{ openshift_cluster_ingress_domain }}"
+      - "ArgoCD: https://openshift-gitops-server-openshift-gitops.{{ openshift_cluster_ingress_domain }}"

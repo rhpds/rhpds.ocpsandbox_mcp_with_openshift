@@ -1,0 +1,67 @@
+---
+- name: Set user variable shorthand
+  ansible.builtin.set_fact:
+    _ocpsandbox_mcp_user: "{{ ocp4_workload_ocpsandbox_mcp_user_username }}"
+
+- name: Delete existing Gitea token
+  ansible.builtin.uri:
+    url: >-
+      {{ ocp4_workload_ocpsandbox_mcp_user_gitea_external_url }}/api/v1/users/{{ _ocpsandbox_mcp_user }}/tokens/{{ ocp4_workload_ocpsandbox_mcp_user_gitea_repository }}
+    method: DELETE
+    status_code: [204, 404, 422]
+    user: "{{ _ocpsandbox_mcp_user }}"
+    password: "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_user_password }}"
+    force_basic_auth: true
+    validate_certs: true
+
+- name: Create Gitea API token for MCP Server
+  ansible.builtin.uri:
+    url: >-
+      {{ ocp4_workload_ocpsandbox_mcp_user_gitea_external_url }}/api/v1/users/{{ _ocpsandbox_mcp_user }}/tokens
+    method: POST
+    body:
+      name: "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_repository }}"
+      scopes:
+      - read:user
+      - read:repository
+      - read:issue
+      - write:issue
+    body_format: json
+    status_code: 201
+    user: "{{ _ocpsandbox_mcp_user }}"
+    password: "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_user_password }}"
+    force_basic_auth: true
+    validate_certs: true
+  register: r_gitea_token
+
+- name: Set Gitea token and LibreChat secret facts
+  ansible.builtin.set_fact:
+    _ocpsandbox_mcp_gitea_token: "{{ r_gitea_token.json.sha1 }}"
+    _ocpsandbox_mcp_librechat_key32: "{{ lookup('password', '/dev/null chars=hexdigits length=32') | lower }}"
+    _ocpsandbox_mcp_librechat_key16: "{{ lookup('password', '/dev/null chars=hexdigits length=16') | lower }}"
+
+- name: Create MCP lab components
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('template', item) | from_yaml }}"
+  loop:
+  - scc.yaml.j2
+  - applicationset-mcp-openshift.yaml.j2
+  - applicationset-mcp-gitea.yaml.j2
+  - applicationset-librechat-config.yaml.j2
+  - applicationset-librechat.yaml.j2
+  - applicationset-agent.yaml.j2
+
+- name: Save user information
+  agnosticd.core.agnosticd_user_info:
+    user: "{{ _ocpsandbox_mcp_user }}"
+    data:
+      user: "{{ _ocpsandbox_mcp_user }}"
+      librechat_url: >-
+        https://librechat-{{ ocp4_workload_ocpsandbox_mcp_user_librechat_namespace_base }}-{{ _ocpsandbox_mcp_user }}.{{ openshift_cluster_ingress_domain }}
+      librechat_user: "{{ _ocpsandbox_mcp_user }}@{{ ocp4_workload_ocpsandbox_mcp_user_librechat_email_domain }}"
+      librechat_password: "{{ ocp4_workload_ocpsandbox_mcp_user_librechat_password }}"
+      openshift_mcp_server_url: >-
+        https://mcp-openshift-{{ ocp4_workload_ocpsandbox_mcp_user_openshift_namespace_base }}-{{ _ocpsandbox_mcp_user }}.{{ openshift_cluster_ingress_domain }}/sse#openshift
+      gitea_mcp_server_url: >-
+        https://mcp-gitea-{{ ocp4_workload_ocpsandbox_mcp_user_gitea_namespace_base }}-{{ _ocpsandbox_mcp_user }}.{{ openshift_cluster_ingress_domain }}/mcp

@@ -1,0 +1,69 @@
+---
+# ------------------------------------------------
+# MCP user provisioner for OCP Sandbox model
+# Deploys MCP servers, LibreChat, and Agent for a single user
+# ------------------------------------------------
+
+# Single user to provision (e.g., "user1-gtpw4")
+ocp4_workload_ocpsandbox_mcp_user_username: ""
+
+# ArgoCD project for all ApplicationSets
+ocp4_workload_ocpsandbox_mcp_user_argocd_project: "appproject-{{ ocp4_workload_ocpsandbox_mcp_user_username }}"
+
+# LiteMaaS credentials
+ocp4_workload_ocpsandbox_mcp_user_litemaas_key: ""
+ocp4_workload_ocpsandbox_mcp_user_litemaas_url: https://litellm.apps.maas.redhatworkshops.io/v1
+ocp4_workload_ocpsandbox_mcp_user_litemaas_models: ["llama-scout-17b"]
+
+# -------------------------------------------------------------------
+# GitOps repo (user's Gitea fork of mcp-gitops)
+# -------------------------------------------------------------------
+ocp4_workload_ocpsandbox_mcp_user_gitops_repo_tag: main
+
+# -------------------------------------------------------------------
+# OpenShift MCP Server
+# -------------------------------------------------------------------
+ocp4_workload_ocpsandbox_mcp_user_openshift_repo_path: helm/mcp-openshift
+ocp4_workload_ocpsandbox_mcp_user_openshift_namespace_base: mcp-openshift
+ocp4_workload_ocpsandbox_mcp_user_openshift_image: quay.io/containers/kubernetes_mcp_server:latest
+
+# -------------------------------------------------------------------
+# Gitea MCP Server
+# -------------------------------------------------------------------
+ocp4_workload_ocpsandbox_mcp_user_gitea_repo_path: helm/mcp-gitea
+ocp4_workload_ocpsandbox_mcp_user_gitea_namespace_base: mcp-gitea
+ocp4_workload_ocpsandbox_mcp_user_gitea_image: docker.gitea.com/gitea-mcp-server:latest
+ocp4_workload_ocpsandbox_mcp_user_gitea_external_url: "https://gitea.{{ openshift_cluster_ingress_domain }}"
+ocp4_workload_ocpsandbox_mcp_user_gitea_internal_url: "http://gitea.gitea.svc.cluster.local:3000"
+ocp4_workload_ocpsandbox_mcp_user_gitea_repository: mcp
+ocp4_workload_ocpsandbox_mcp_user_gitea_user_password: ""
+
+# -------------------------------------------------------------------
+# LibreChat
+# -------------------------------------------------------------------
+ocp4_workload_ocpsandbox_mcp_user_librechat_namespace_base: librechat
+ocp4_workload_ocpsandbox_mcp_user_librechat_repo: https://github.com/danny-avila/LibreChat
+ocp4_workload_ocpsandbox_mcp_user_librechat_repo_tag: v0.8.1
+ocp4_workload_ocpsandbox_mcp_user_librechat_repo_path: ./helm/librechat
+ocp4_workload_ocpsandbox_mcp_user_librechat_config_repo_path: ./helm/librechat
+ocp4_workload_ocpsandbox_mcp_user_librechat_email_domain: "example.com"
+ocp4_workload_ocpsandbox_mcp_user_librechat_password: ""
+
+# -------------------------------------------------------------------
+# Agent
+# -------------------------------------------------------------------
+ocp4_workload_ocpsandbox_mcp_user_agent_repo_path: helm/agent
+ocp4_workload_ocpsandbox_mcp_user_agent_namespace_base: agent
+ocp4_workload_ocpsandbox_mcp_user_agent_model_name: "openai/llama-scout-17b"
+
+# -------------------------------------------------------------------
+# Metrics access
+# -------------------------------------------------------------------
+ocp4_workload_ocpsandbox_mcp_user_metrics_enable: false
+
+# -------------------------------------------------------------------
+# Cloud Native PostgreSQL operator
+# -------------------------------------------------------------------
+ocp4_workload_ocpsandbox_mcp_user_cloud_native_postgresql_operator_enable: false
+ocp4_workload_ocpsandbox_mcp_user_cloud_native_postgresql_operator_namespace: cloudnative-pg
+ocp4_workload_ocpsandbox_mcp_user_cloud_native_postgresql_operator_channel: stable-v1
