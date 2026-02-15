@@ -17,14 +17,16 @@
 
   vars:
     ACTION: provision
-    guid: x2r6h
+    guid: "{{ lookup('env', 'GUID') | default('changeme', true) }}"
     output_dir: "{{ playbook_dir }}/output"
 
     # ---------------------------------------------------------------
     # Cluster connection
     # ---------------------------------------------------------------
+    # Override via: -e guid=xxxxx -e cluster_admin_agnosticd_sa_token=xxxxx
+    # Or use a local secrets file: -e @tests/e2e/secrets.yml
     sandbox_openshift_api_url: "https://api.cluster-{{ guid }}.dynamic.redhatworkshops.io:6443"
-    cluster_admin_agnosticd_sa_token: REDACTED_SA_TOKEN
+    cluster_admin_agnosticd_sa_token: "{{ lookup('env', 'CLUSTER_ADMIN_TOKEN') | default('REPLACE_ME', true) }}"
 
     common_password: "{{ (guid[:5] | hash('md5') | int(base=16) | b64encode)[:8] }}"
 

@@ -1,11 +1,17 @@
 #!/bin/bash
 # End-to-end test runner for MCP with OpenShift sandbox migration
 #
+# Credentials: set env vars or use a local secrets.yml file (gitignored)
+#   export GUID=xxxxx
+#   export CLUSTER_ADMIN_TOKEN=eyJhbG...
+#   export LITELLM_MASTER_KEY=sk-...
+#
 # Usage:
 #   ./run.sh provision     # Deploy everything
 #   ./run.sh destroy       # Tear down everything
 #   ./run.sh provision -v  # Verbose
 #   ./run.sh destroy -vv   # Extra verbose
+#   ./run.sh provision -e @tests/e2e/secrets.yml  # Use local secrets file
 
 set -euo pipefail
 
