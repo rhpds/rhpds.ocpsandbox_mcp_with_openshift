@@ -39,6 +39,10 @@
     ocp4_workload_authentication_keycloak_user_count: 0
     ocp4_workload_authentication_keycloak_remove_kubeadmin: false
 
+    # Set to true on shared clusters to preserve existing OAuth IdPs
+    # (e.g. sso-internal, rhsso) that the keycloak role would otherwise replace
+    preserve_existing_oauth_idps: true
+
     # ---------------------------------------------------------------
     # Gitea (operator + instance, admin only, no users)
     # ---------------------------------------------------------------
@@ -174,9 +178,57 @@
   # ===================================================================
   # Step 1: Keycloak (RHBK operator + OAuth provider)
   # ===================================================================
-  - name: "Step 1: Deploy Keycloak authentication"
+  - name: "Step 1a: Save existing OAuth identity providers"
+    kubernetes.core.k8s_info:
+      api_version: config.openshift.io/v1
+      kind: OAuth
+      name: cluster
+    register: r_oauth_before
+    when: preserve_existing_oauth_idps | default(false) | bool
+
+  - name: "Step 1a: Store existing IdPs"
+    ansible.builtin.set_fact:
+      _saved_oauth_idps: "{{ r_oauth_before.resources[0].spec.identityProviders | default([]) }}"
+    when: preserve_existing_oauth_idps | default(false) | bool
+
+  - name: "Step 1b: Deploy Keycloak authentication"
     ansible.builtin.include_role:
       name: agnosticd.core_workloads.ocp4_workload_authentication_keycloak
+
+  - name: "Step 1c: Restore existing OAuth identity providers"
+    when: preserve_existing_oauth_idps | default(false) | bool
+    block:
+    - name: Get current OAuth config after keycloak role
+      kubernetes.core.k8s_info:
+        api_version: config.openshift.io/v1
+        kind: OAuth
+        name: cluster
+      register: r_oauth_after
+
+    - name: Build merged IdP list (existing + new RHBK)
+      ansible.builtin.set_fact:
+        _merged_oauth_idps: >-
+          {{
+            _saved_oauth_idps
+            | rejectattr('name', 'in', r_oauth_after.resources[0].spec.identityProviders | map(attribute='name') | list)
+            | list
+            + r_oauth_after.resources[0].spec.identityProviders
+          }}
+
+    - name: Patch OAuth with merged IdPs
+      kubernetes.core.k8s:
+        state: patched
+        api_version: config.openshift.io/v1
+        kind: OAuth
+        name: cluster
+        definition:
+          spec:
+            identityProviders: "{{ _merged_oauth_idps }}"
+      when: _merged_oauth_idps | length > r_oauth_after.resources[0].spec.identityProviders | length
+
+    - name: "Display OAuth identity providers"
+      ansible.builtin.debug:
+        msg: "OAuth IdPs: {{ _merged_oauth_idps | map(attribute='name') | list }}"
 
   # ===================================================================
   # Step 2: Gitea operator + instance (admin only)
@@ -209,6 +261,14 @@
   # ===================================================================
   # Step 6: Enable user workload monitoring (for Module 3 telemetry)
   # ===================================================================
+  - name: "Step 6: Check if user workload monitoring is enabled"
+    kubernetes.core.k8s_info:
+      api_version: v1
+      kind: ConfigMap
+      name: cluster-monitoring-config
+      namespace: openshift-monitoring
+    register: r_monitoring_config
+
   - name: "Step 6: Enable user workload monitoring"
     kubernetes.core.k8s:
       state: present
@@ -221,6 +281,16 @@
         data:
           config.yaml: |
             enableUserWorkload: true
+    when: >-
+      r_monitoring_config.resources | length == 0 or
+      'enableUserWorkload: true' not in (r_monitoring_config.resources[0].data['config.yaml'] | default(''))
+
+  - name: "Step 6: User workload monitoring already enabled -- skipping"
+    ansible.builtin.debug:
+      msg: "cluster-monitoring-config already has enableUserWorkload: true -- preserving existing config"
+    when: >-
+      r_monitoring_config.resources | length > 0 and
+      'enableUserWorkload: true' in (r_monitoring_config.resources[0].data['config.yaml'] | default(''))
 
   - name: "Step 6b: Enable dev perspective in OpenShift console"
     kubernetes.core.k8s:
