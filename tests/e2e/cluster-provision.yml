@@ -77,6 +77,9 @@
     ocp4_workload_openshift_gitops_use_catalog_snapshot: false
     ocp4_workload_openshift_gitops_rbac_update: true
     ocp4_workload_openshift_gitops_rbac_policy: |
+      g, system:cluster-admins, role:admin
+      g, cluster-admins, role:admin
+      g, rhpds-admins, role:admin
       g, admin, role:admin
     ocp4_workload_openshift_gitops_rbac_scopes: '[email,groups]'
     ocp4_workload_openshift_gitops_controller_update: true
