@@ -4,6 +4,28 @@
     _ocpsandbox_mcp_user: "{{ ocp4_workload_ocpsandbox_mcp_user_username }}"
 
 # ------------------------------------------------------------------
+# Discover cluster ingress domain (may not be set if keycloak_user
+# role has not run yet during destroy)
+# ------------------------------------------------------------------
+- name: Discover cluster ingress domain
+  when: openshift_cluster_ingress_domain is not defined
+  block:
+  - name: Get cluster ingress config
+    kubernetes.core.k8s_info:
+      host: "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_api_url }}"
+      api_key: "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_api_token }}"
+      validate_certs: false
+      api_version: config.openshift.io/v1
+      kind: Ingress
+      name: cluster
+    register: r_ingress_config
+
+  - name: Set ingress domain fact
+    ansible.builtin.set_fact:
+      openshift_cluster_ingress_domain: >-
+        {{ r_ingress_config.resources[0].spec.domain }}
+
+# ------------------------------------------------------------------
 # Delete Gitea API token
 # ------------------------------------------------------------------
 - name: Delete Gitea API token
@@ -23,6 +45,9 @@
 # ------------------------------------------------------------------
 - name: Delete ApplicationSets
   kubernetes.core.k8s:
+    host: "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_api_url }}"
+    api_key: "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_api_token }}"
+    validate_certs: false
     api_version: argoproj.io/v1alpha1
     kind: ApplicationSet
     name: "{{ item }}"
@@ -49,6 +74,9 @@
 
 - name: Wait for Applications to be deleted
   kubernetes.core.k8s_info:
+    host: "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_api_url }}"
+    api_key: "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_api_token }}"
+    validate_certs: false
     api_version: argoproj.io/v1alpha1
     kind: Application
     namespace: openshift-gitops
@@ -66,6 +94,9 @@
 # ------------------------------------------------------------------
 - name: Delete user namespaces
   kubernetes.core.k8s:
+    host: "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_api_url }}"
+    api_key: "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_api_token }}"
+    validate_certs: false
     api_version: v1
     kind: Namespace
     name: "{{ item }}"
@@ -82,6 +113,9 @@
 # ------------------------------------------------------------------
 - name: Delete SCC
   kubernetes.core.k8s:
+    host: "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_api_url }}"
+    api_key: "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_api_token }}"
+    validate_certs: false
     api_version: security.openshift.io/v1
     kind: SecurityContextConstraints
     name: mcpserver-scc
