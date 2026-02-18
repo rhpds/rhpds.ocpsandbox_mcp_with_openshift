@@ -242,6 +242,7 @@
     user: "{{ _ocpsandbox_mcp_user }}"
     data:
       user: "{{ _ocpsandbox_mcp_user }}"
+      password: "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_user_password }}"
       gitea_url: "{{ _ocpsandbox_mcp_gitea_url }}"
       gitea_user: "{{ _ocpsandbox_mcp_user }}"
       gitea_password: "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_user_password }}"
