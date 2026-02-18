@@ -346,6 +346,15 @@
           sourceNamespace: openshift-marketplace
 
   # ===================================================================
+  # Step 8: OCP Console Embed (Showroom iframe support)
+  # Deploys MutatingWebhook, patches IngressController CSP headers
+  # and OAuth route for iframe compatibility. Cluster-level, run once.
+  # ===================================================================
+  - name: "Step 8: Deploy OCP Console Embed for Showroom"
+    ansible.builtin.include_role:
+      name: agnosticd.showroom.ocp4_workload_ocp_console_embed
+
+  # ===================================================================
   # Summary
   # ===================================================================
   - name: "Cluster Setup Complete"
