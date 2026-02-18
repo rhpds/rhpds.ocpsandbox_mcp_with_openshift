@@ -3,6 +3,28 @@
   ansible.builtin.set_fact:
     _ocpsandbox_mcp_user: "{{ ocp4_workload_ocpsandbox_mcp_user_username }}"
 
+# ------------------------------------------------------------------
+# Discover cluster ingress domain (may not be set if keycloak_user
+# role is not in the workloads list)
+# ------------------------------------------------------------------
+- name: Discover cluster ingress domain
+  when: openshift_cluster_ingress_domain is not defined
+  block:
+  - name: Get cluster ingress config
+    kubernetes.core.k8s_info:
+      host: "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_api_url }}"
+      api_key: "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_api_token }}"
+      validate_certs: false
+      api_version: config.openshift.io/v1
+      kind: Ingress
+      name: cluster
+    register: r_ingress_config
+
+  - name: Set ingress domain fact
+    ansible.builtin.set_fact:
+      openshift_cluster_ingress_domain: >-
+        {{ r_ingress_config.resources[0].spec.domain }}
+
 - name: Delete existing Gitea token
   ansible.builtin.uri:
     url: >-
