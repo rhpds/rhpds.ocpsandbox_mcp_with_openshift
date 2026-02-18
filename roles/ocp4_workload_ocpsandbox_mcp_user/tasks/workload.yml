@@ -26,18 +26,27 @@
         {{ r_ingress_config.resources[0].spec.domain }}
 
 # ------------------------------------------------------------------
-# Write kubeconfig for downstream roles (e.g., showroom) that use
-# kubernetes.core without explicit host:/api_key: params
+# Write kubeconfig as fallback for downstream roles (e.g., showroom,
+# console_embed) that use kubernetes.core without explicit host:/api_key:.
+# Primary auth is via K8S_AUTH_* env vars set by the AgnosticD namespace
+# config framework. This is a safety net for e2e tests or environments
+# where those env vars are not set.
 # ------------------------------------------------------------------
-- name: Ensure .kube directory exists
+- name: Determine kubeconfig path
+  ansible.builtin.set_fact:
+    _kubeconfig_path: >-
+      {{ lookup('env', 'KUBECONFIG')
+         | default(lookup('env', 'HOME') ~ '/.kube/config', true) }}
+
+- name: Ensure kubeconfig directory exists
   ansible.builtin.file:
-    path: "{{ lookup('env', 'HOME') }}/.kube"
+    path: "{{ _kubeconfig_path | dirname }}"
     state: directory
     mode: "0700"
 
 - name: Write kubeconfig for downstream roles
   ansible.builtin.copy:
-    dest: "{{ lookup('env', 'HOME') }}/.kube/config"
+    dest: "{{ _kubeconfig_path }}"
     mode: "0600"
     content: |
       apiVersion: v1
@@ -45,7 +54,7 @@
       clusters:
       - cluster:
           insecure-skip-tls-verify: true
-          server: {{ ocp4_workload_ocpsandbox_mcp_user_openshift_api_url }}
+          server: "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_api_url | trim }}"
         name: sandbox
       contexts:
       - context:
@@ -56,11 +65,7 @@
       users:
       - name: admin
         user:
-          token: {{ ocp4_workload_ocpsandbox_mcp_user_openshift_api_token }}
-
-- name: Ensure KUBECONFIG is set
-  ansible.builtin.set_fact:
-    k8s_auth_kubeconfig: "{{ lookup('env', 'HOME') }}/.kube/config"
+          token: "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_api_token | trim }}"
 
 # ==================================================================
 # Deploy per-user Gitea instance
