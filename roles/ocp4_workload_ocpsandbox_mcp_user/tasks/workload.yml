@@ -25,10 +25,125 @@
       openshift_cluster_ingress_domain: >-
         {{ r_ingress_config.resources[0].spec.domain }}
 
+# ==================================================================
+# Deploy per-user Gitea instance
+# ==================================================================
+- name: Create per-user Gitea namespace
+  kubernetes.core.k8s:
+    host: "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_api_url }}"
+    api_key: "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_api_token }}"
+    validate_certs: false
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_namespace }}"
+
+- name: Deploy per-user Gitea instance
+  kubernetes.core.k8s:
+    host: "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_api_url }}"
+    api_key: "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_api_token }}"
+    validate_certs: false
+    state: present
+    definition:
+      apiVersion: pfe.rhpds.com/v1
+      kind: Gitea
+      metadata:
+        name: gitea
+        namespace: "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_namespace }}"
+      spec:
+        giteaImage: "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_instance_image }}"
+        giteaImageTag: "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_instance_image_tag }}"
+        giteaVolumeSize: "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_volume_size }}"
+        postgresqlImage: "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_postgresql_image }}"
+        postgresqlImageTag: "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_postgresql_image_tag }}"
+        postgresqlVolumeSize: "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_postgresql_volume_size }}"
+        giteaSsl: true
+        giteaAdminUser: "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_admin_user }}"
+        giteaAdminPassword: "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_admin_password }}"
+        giteaAdminEmail: "admin@demo.redhat.com"
+        giteaDisableRegistration: true
+        giteaEnableCaptcha: false
+        giteaAllowCreateOrganization: true
+        giteaRegisterEmailConfirm: false
+        giteaEnableNotifyMail: false
+
+- name: Wait for Gitea route to be available
+  kubernetes.core.k8s_info:
+    host: "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_api_url }}"
+    api_key: "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_api_token }}"
+    validate_certs: false
+    api_version: route.openshift.io/v1
+    kind: Route
+    namespace: "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_namespace }}"
+    label_selectors:
+    - app=gitea
+  register: r_gitea_route
+  retries: 60
+  delay: 10
+  until: r_gitea_route.resources | length > 0
+
+- name: Set per-user Gitea URL
+  ansible.builtin.set_fact:
+    _ocpsandbox_mcp_gitea_url: "https://{{ r_gitea_route.resources[0].spec.host }}"
+
+- name: Wait for Gitea API to be ready
+  ansible.builtin.uri:
+    url: "{{ _ocpsandbox_mcp_gitea_url }}/api/v1/version"
+    validate_certs: true
+  register: r_gitea_ready
+  retries: 30
+  delay: 10
+  until: r_gitea_ready.status | default(0) == 200
+
+# ------------------------------------------------------------------
+# Create user and migrate repositories
+# ------------------------------------------------------------------
+- name: Create Gitea user
+  ansible.builtin.uri:
+    url: "{{ _ocpsandbox_mcp_gitea_url }}/api/v1/admin/users"
+    method: POST
+    body_format: json
+    user: "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_admin_user }}"
+    password: "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_admin_password }}"
+    force_basic_auth: true
+    validate_certs: true
+    body:
+      username: "{{ _ocpsandbox_mcp_user }}"
+      password: "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_user_password }}"
+      email: "{{ _ocpsandbox_mcp_user }}@demo.redhat.com"
+      must_change_password: false
+    status_code: [201, 422]
+
+- name: Migrate repositories for user
+  ansible.builtin.uri:
+    url: "{{ _ocpsandbox_mcp_gitea_url }}/api/v1/repos/migrate"
+    method: POST
+    body_format: json
+    user: "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_admin_user }}"
+    password: "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_admin_password }}"
+    force_basic_auth: true
+    validate_certs: true
+    body:
+      clone_addr: "{{ repo_item.repo }}"
+      repo_name: "{{ repo_item.name }}"
+      repo_owner: "{{ _ocpsandbox_mcp_user }}"
+      mirror: false
+      private: "{{ repo_item.private | default(false) }}"
+    status_code: [201, 409]
+  loop: "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_repositories }}"
+  loop_control:
+    loop_var: repo_item
+    label: "{{ repo_item.name }}"
+
+# ------------------------------------------------------------------
+# Create Gitea API token for MCP Server
+# ------------------------------------------------------------------
 - name: Delete existing Gitea token
   ansible.builtin.uri:
     url: >-
-      {{ ocp4_workload_ocpsandbox_mcp_user_gitea_external_url }}/api/v1/users/{{ _ocpsandbox_mcp_user }}/tokens/{{ ocp4_workload_ocpsandbox_mcp_user_gitea_repository }}
+      {{ _ocpsandbox_mcp_gitea_url }}/api/v1/users/{{ _ocpsandbox_mcp_user }}/tokens/{{ ocp4_workload_ocpsandbox_mcp_user_gitea_repository }}
     method: DELETE
     status_code: [204, 404, 422]
     user: "{{ _ocpsandbox_mcp_user }}"
@@ -39,7 +154,7 @@
 - name: Create Gitea API token for MCP Server
   ansible.builtin.uri:
     url: >-
-      {{ ocp4_workload_ocpsandbox_mcp_user_gitea_external_url }}/api/v1/users/{{ _ocpsandbox_mcp_user }}/tokens
+      {{ _ocpsandbox_mcp_gitea_url }}/api/v1/users/{{ _ocpsandbox_mcp_user }}/tokens
     method: POST
     body:
       name: "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_repository }}"
@@ -62,6 +177,9 @@
     _ocpsandbox_mcp_librechat_key32: "{{ lookup('password', '/dev/null chars=hexdigits length=32') | lower }}"
     _ocpsandbox_mcp_librechat_key16: "{{ lookup('password', '/dev/null chars=hexdigits length=16') | lower }}"
 
+# ==================================================================
+# Create ArgoCD ApplicationSets
+# ==================================================================
 - name: Create MCP lab components
   kubernetes.core.k8s:
     host: "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_api_url }}"
@@ -82,6 +200,9 @@
     user: "{{ _ocpsandbox_mcp_user }}"
     data:
       user: "{{ _ocpsandbox_mcp_user }}"
+      gitea_url: "{{ _ocpsandbox_mcp_gitea_url }}"
+      gitea_user: "{{ _ocpsandbox_mcp_user }}"
+      gitea_password: "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_user_password }}"
       librechat_url: >-
         https://librechat-{{ ocp4_workload_ocpsandbox_mcp_user_librechat_namespace_base }}-{{ _ocpsandbox_mcp_user }}.{{ openshift_cluster_ingress_domain }}
       librechat_user: "{{ _ocpsandbox_mcp_user }}@{{ ocp4_workload_ocpsandbox_mcp_user_librechat_email_domain }}"

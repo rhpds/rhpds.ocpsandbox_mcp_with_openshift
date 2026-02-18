@@ -26,21 +26,6 @@
         {{ r_ingress_config.resources[0].spec.domain }}
 
 # ------------------------------------------------------------------
-# Delete Gitea API token
-# ------------------------------------------------------------------
-- name: Delete Gitea API token
-  ansible.builtin.uri:
-    url: >-
-      {{ ocp4_workload_ocpsandbox_mcp_user_gitea_external_url }}/api/v1/users/{{ _ocpsandbox_mcp_user }}/tokens/{{ ocp4_workload_ocpsandbox_mcp_user_gitea_repository }}
-    method: DELETE
-    status_code: [204, 404, 422]
-    user: "{{ _ocpsandbox_mcp_user }}"
-    password: "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_user_password }}"
-    force_basic_auth: true
-    validate_certs: true
-  ignore_errors: true
-
-# ------------------------------------------------------------------
 # Delete ApplicationSets (cascades to Applications and namespaces)
 # ------------------------------------------------------------------
 - name: Delete ApplicationSets
@@ -106,6 +91,7 @@
   - "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_namespace_base }}-{{ _ocpsandbox_mcp_user }}"
   - "{{ ocp4_workload_ocpsandbox_mcp_user_librechat_namespace_base }}-{{ _ocpsandbox_mcp_user }}"
   - "{{ ocp4_workload_ocpsandbox_mcp_user_agent_namespace_base }}-{{ _ocpsandbox_mcp_user }}"
+  - "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_namespace }}"
   ignore_errors: true
 
 # ------------------------------------------------------------------

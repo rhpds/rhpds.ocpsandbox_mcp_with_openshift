@@ -32,15 +32,31 @@ ocp4_workload_ocpsandbox_mcp_user_openshift_namespace_base: mcp-openshift
 ocp4_workload_ocpsandbox_mcp_user_openshift_image: quay.io/containers/kubernetes_mcp_server:latest
 
 # -------------------------------------------------------------------
+# Per-user Gitea instance (deployed via Gitea operator)
+# -------------------------------------------------------------------
+ocp4_workload_ocpsandbox_mcp_user_gitea_namespace: "gitea-{{ ocp4_workload_ocpsandbox_mcp_user_username }}"
+ocp4_workload_ocpsandbox_mcp_user_gitea_instance_image: quay.io/rhpds/gitea
+ocp4_workload_ocpsandbox_mcp_user_gitea_instance_image_tag: "1.25.4"
+ocp4_workload_ocpsandbox_mcp_user_gitea_volume_size: 2Gi
+ocp4_workload_ocpsandbox_mcp_user_gitea_postgresql_image: registry.redhat.io/rhel10/postgresql-16
+ocp4_workload_ocpsandbox_mcp_user_gitea_postgresql_image_tag: latest
+ocp4_workload_ocpsandbox_mcp_user_gitea_postgresql_volume_size: 2Gi
+ocp4_workload_ocpsandbox_mcp_user_gitea_admin_user: gitea-admin
+ocp4_workload_ocpsandbox_mcp_user_gitea_admin_password: "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_user_password }}"
+ocp4_workload_ocpsandbox_mcp_user_gitea_user_password: ""
+ocp4_workload_ocpsandbox_mcp_user_gitea_repositories:
+- name: mcp
+  repo: https://github.com/rhpds/ocpsandbox-mcp-with-openshift-gitops
+  private: false
+
+# -------------------------------------------------------------------
 # Gitea MCP Server
 # -------------------------------------------------------------------
 ocp4_workload_ocpsandbox_mcp_user_gitea_repo_path: helm/mcp-gitea
 ocp4_workload_ocpsandbox_mcp_user_gitea_namespace_base: mcp-gitea
 ocp4_workload_ocpsandbox_mcp_user_gitea_image: docker.gitea.com/gitea-mcp-server:latest
-ocp4_workload_ocpsandbox_mcp_user_gitea_external_url: "https://gitea.{{ openshift_cluster_ingress_domain }}"
-ocp4_workload_ocpsandbox_mcp_user_gitea_internal_url: "http://gitea.gitea.svc.cluster.local:3000"
+ocp4_workload_ocpsandbox_mcp_user_gitea_internal_url: "http://gitea.{{ ocp4_workload_ocpsandbox_mcp_user_gitea_namespace }}.svc.cluster.local:3000"
 ocp4_workload_ocpsandbox_mcp_user_gitea_repository: mcp
-ocp4_workload_ocpsandbox_mcp_user_gitea_user_password: ""
 
 # -------------------------------------------------------------------
 # LibreChat
