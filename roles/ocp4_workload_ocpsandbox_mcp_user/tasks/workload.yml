@@ -29,6 +29,12 @@
 # Write kubeconfig for downstream roles (e.g., showroom) that use
 # kubernetes.core without explicit host:/api_key: params
 # ------------------------------------------------------------------
+- name: Ensure .kube directory exists
+  ansible.builtin.file:
+    path: "{{ lookup('env', 'HOME') }}/.kube"
+    state: directory
+    mode: "0700"
+
 - name: Write kubeconfig for downstream roles
   ansible.builtin.copy:
     dest: "{{ lookup('env', 'HOME') }}/.kube/config"
