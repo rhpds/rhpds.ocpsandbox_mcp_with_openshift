@@ -27,7 +27,7 @@ ocp4_workload_ocpsandbox_mcp_user_gitops_repo_tag: main
 # -------------------------------------------------------------------
 # OpenShift MCP Server
 # -------------------------------------------------------------------
-ocp4_workload_ocpsandbox_mcp_user_openshift_repo_path: helm/mcp-openshift
+ocp4_workload_ocpsandbox_mcp_user_openshift_repo_path: tenant/mcp-openshift
 ocp4_workload_ocpsandbox_mcp_user_openshift_namespace_base: mcp-openshift
 ocp4_workload_ocpsandbox_mcp_user_openshift_image: quay.io/containers/kubernetes_mcp_server:latest
 
@@ -52,7 +52,7 @@ ocp4_workload_ocpsandbox_mcp_user_gitea_repositories:
 # -------------------------------------------------------------------
 # Gitea MCP Server
 # -------------------------------------------------------------------
-ocp4_workload_ocpsandbox_mcp_user_gitea_repo_path: helm/mcp-gitea
+ocp4_workload_ocpsandbox_mcp_user_gitea_repo_path: tenant/mcp-gitea
 ocp4_workload_ocpsandbox_mcp_user_gitea_namespace_base: mcp-gitea
 ocp4_workload_ocpsandbox_mcp_user_gitea_image: docker.gitea.com/gitea-mcp-server:latest
 ocp4_workload_ocpsandbox_mcp_user_gitea_internal_url: "http://gitea.{{ ocp4_workload_ocpsandbox_mcp_user_gitea_namespace }}.svc.cluster.local:3000"
@@ -65,14 +65,14 @@ ocp4_workload_ocpsandbox_mcp_user_librechat_namespace_base: librechat
 ocp4_workload_ocpsandbox_mcp_user_librechat_repo: https://github.com/danny-avila/LibreChat
 ocp4_workload_ocpsandbox_mcp_user_librechat_repo_tag: v0.8.1
 ocp4_workload_ocpsandbox_mcp_user_librechat_repo_path: ./helm/librechat
-ocp4_workload_ocpsandbox_mcp_user_librechat_config_repo_path: ./helm/librechat
+ocp4_workload_ocpsandbox_mcp_user_librechat_config_repo_path: ./tenant/librechat
 ocp4_workload_ocpsandbox_mcp_user_librechat_email_domain: "example.com"
 ocp4_workload_ocpsandbox_mcp_user_librechat_password: ""
 
 # -------------------------------------------------------------------
 # Agent
 # -------------------------------------------------------------------
-ocp4_workload_ocpsandbox_mcp_user_agent_repo_path: helm/agent
+ocp4_workload_ocpsandbox_mcp_user_agent_repo_path: tenant/agent
 ocp4_workload_ocpsandbox_mcp_user_agent_namespace_base: agent
 ocp4_workload_ocpsandbox_mcp_user_agent_model_name: "openai/llama-scout-17b"
 

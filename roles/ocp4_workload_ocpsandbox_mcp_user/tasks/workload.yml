@@ -88,10 +88,15 @@
   ansible.builtin.set_fact:
     _ocpsandbox_mcp_gitea_url: "https://{{ r_gitea_route.resources[0].spec.host }}"
 
-- name: Wait for Gitea API to be ready
+- name: Wait for Gitea admin API to be ready
   ansible.builtin.uri:
-    url: "{{ _ocpsandbox_mcp_gitea_url }}/api/v1/version"
+    url: "{{ _ocpsandbox_mcp_gitea_url }}/api/v1/admin/users"
+    method: GET
+    user: "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_admin_user }}"
+    password: "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_admin_password }}"
+    force_basic_auth: true
     validate_certs: true
+    status_code: [200]
   register: r_gitea_ready
   retries: 30
   delay: 10
