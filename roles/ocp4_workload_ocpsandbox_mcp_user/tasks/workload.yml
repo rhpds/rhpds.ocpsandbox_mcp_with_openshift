@@ -125,6 +125,7 @@
       metadata:
         name: "{{ item }}"
   loop:
+  - "{{ ocp4_workload_ocpsandbox_mcp_user_librechat_namespace }}"
   - "{{ ocp4_workload_ocpsandbox_mcp_user_mcp_gitea_namespace }}"
   - "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_namespace }}"
 
