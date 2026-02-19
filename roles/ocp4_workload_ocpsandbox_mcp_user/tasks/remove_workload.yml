@@ -52,7 +52,7 @@
   ansible.builtin.set_fact:
     _ocpsandbox_mcp_expected_apps:
     - "agent-{{ _ocpsandbox_mcp_user }}"
-    - "{{ ocp4_workload_ocpsandbox_mcp_user_librechat_namespace_base }}-{{ _ocpsandbox_mcp_user }}"
+    - "librechat-{{ _ocpsandbox_mcp_user }}"
     - "librechat-config-{{ _ocpsandbox_mcp_user }}"
     - "mcp-gitea-{{ _ocpsandbox_mcp_user }}"
     - "mcp-openshift-{{ _ocpsandbox_mcp_user }}"
