@@ -21,12 +21,12 @@ spec:
     spec:
       destination:
         name: ""
-        namespace: "{{ ocp4_workload_ocpsandbox_mcp_user_agent_namespace_base }}-{% raw %}{{ user }}{% endraw %}"
+        namespace: "{{ ocp4_workload_ocpsandbox_mcp_user_agent_namespace }}"
         server: https://kubernetes.default.svc
       project: {{ ocp4_workload_ocpsandbox_mcp_user_argocd_project }}
       syncPolicy:
         syncOptions:
-        - CreateNamespace=true
+        - CreateNamespace=false
         automated:
           prune: true
           selfHeal: false
@@ -40,21 +40,21 @@ spec:
 
             user: "{% raw %}{{ user }}{% endraw %}"
             application_name: agent
-            namespace: "{{ ocp4_workload_ocpsandbox_mcp_user_agent_namespace_base }}-{% raw %}{{ user }}{% endraw %}"
+            namespace: "{{ ocp4_workload_ocpsandbox_mcp_user_agent_namespace }}"
 
             git_url: "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_internal_url }}/{% raw %}{{ user }}{% endraw %}/mcp.git"
             git_revision: main
             git_subdirectory: agent
-            agent_endpoint: "http://agent.{{ ocp4_workload_ocpsandbox_mcp_user_agent_namespace_base }}-{% raw %}{{ user }}{% endraw %}.svc:8000/report-failure"
+            agent_endpoint: "http://agent.{{ ocp4_workload_ocpsandbox_mcp_user_agent_namespace }}.svc:8000/report-failure"
 
             # Agent Configuration
             agentConfig:
               litellm_url: {{ ocp4_workload_ocpsandbox_mcp_user_litemaas_url }}
               litellm_api_key: "{% raw %}{{ litemaas_key }}{% endraw %}"
               litellm_model: {{ ocp4_workload_ocpsandbox_mcp_user_agent_model_name }}
-              mcp_openshift_url: "http://mcp-openshift-proxy.{{ ocp4_workload_ocpsandbox_mcp_user_openshift_namespace_base }}-{% raw %}{{ user }}{% endraw %}.svc.cluster.local:8080/sse#openshift"
+              mcp_openshift_url: "http://mcp-openshift-proxy.{{ ocp4_workload_ocpsandbox_mcp_user_openshift_namespace }}.svc.cluster.local:8080/sse#openshift"
               mcp_openshift_transport: sse
-              mcp_gitea_url: "http://mcp-gitea-proxy.{{ ocp4_workload_ocpsandbox_mcp_user_gitea_namespace_base }}-{% raw %}{{ user }}{% endraw %}.svc.cluster.local:8080/mcp"
+              mcp_gitea_url: "http://mcp-gitea-proxy.{{ ocp4_workload_ocpsandbox_mcp_user_mcp_gitea_namespace }}.svc.cluster.local:8080/mcp"
               mcp_gitea_user: "{% raw %}{{ user }}{% endraw %}"
               mcp_gitea_repo: {{ ocp4_workload_ocpsandbox_mcp_user_gitea_repository }}
               mcp_gitea_transport: streamable-http

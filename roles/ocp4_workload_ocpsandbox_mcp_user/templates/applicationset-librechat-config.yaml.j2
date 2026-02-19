@@ -21,12 +21,12 @@ spec:
     spec:
       destination:
         name: ""
-        namespace: "{{ ocp4_workload_ocpsandbox_mcp_user_librechat_namespace_base }}-{% raw %}{{ user }}{% endraw %}"
+        namespace: "{{ ocp4_workload_ocpsandbox_mcp_user_librechat_namespace }}"
         server: https://kubernetes.default.svc
       project: {{ ocp4_workload_ocpsandbox_mcp_user_argocd_project }}
       syncPolicy:
         syncOptions:
-        - CreateNamespace=true
+        - CreateNamespace=false
         automated:
           prune: true
           selfHeal: false
@@ -40,7 +40,7 @@ spec:
 
             user: "{% raw %}{{ user }}{% endraw %}"
             application_name: librechat
-            namespace: "{{ ocp4_workload_ocpsandbox_mcp_user_librechat_namespace_base }}-{% raw %}{{ user }}{% endraw %}"
+            namespace: "{{ ocp4_workload_ocpsandbox_mcp_user_librechat_namespace }}"
 
             secrets:
               creds_key: {{ _ocpsandbox_mcp_librechat_key32 }}

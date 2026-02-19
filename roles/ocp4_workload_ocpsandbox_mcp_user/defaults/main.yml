@@ -25,16 +25,26 @@ ocp4_workload_ocpsandbox_mcp_user_litemaas_models: ["llama-scout-17b"]
 ocp4_workload_ocpsandbox_mcp_user_gitops_repo_tag: main
 
 # -------------------------------------------------------------------
+# Namespace names
+# When using sandbox API, override these with sandbox-provided names
+# (e.g., sandbox_openshift_namespace, librechat_namespace, etc.)
+# Defaults construct names as {base}-{username} for backward compat.
+# -------------------------------------------------------------------
+ocp4_workload_ocpsandbox_mcp_user_agent_namespace: "agent-{{ ocp4_workload_ocpsandbox_mcp_user_username }}"
+ocp4_workload_ocpsandbox_mcp_user_openshift_namespace: "mcp-openshift-{{ ocp4_workload_ocpsandbox_mcp_user_username }}"
+ocp4_workload_ocpsandbox_mcp_user_mcp_gitea_namespace: "mcp-gitea-{{ ocp4_workload_ocpsandbox_mcp_user_username }}"
+ocp4_workload_ocpsandbox_mcp_user_librechat_namespace: "librechat-{{ ocp4_workload_ocpsandbox_mcp_user_username }}"
+ocp4_workload_ocpsandbox_mcp_user_gitea_namespace: "gitea-{{ ocp4_workload_ocpsandbox_mcp_user_username }}"
+
+# -------------------------------------------------------------------
 # OpenShift MCP Server
 # -------------------------------------------------------------------
 ocp4_workload_ocpsandbox_mcp_user_openshift_repo_path: tenant/mcp-openshift
-ocp4_workload_ocpsandbox_mcp_user_openshift_namespace_base: mcp-openshift
 ocp4_workload_ocpsandbox_mcp_user_openshift_image: quay.io/containers/kubernetes_mcp_server:latest
 
 # -------------------------------------------------------------------
 # Per-user Gitea instance (deployed via Gitea operator)
 # -------------------------------------------------------------------
-ocp4_workload_ocpsandbox_mcp_user_gitea_namespace: "gitea-{{ ocp4_workload_ocpsandbox_mcp_user_username }}"
 ocp4_workload_ocpsandbox_mcp_user_gitea_instance_image: quay.io/rhpds/gitea
 ocp4_workload_ocpsandbox_mcp_user_gitea_instance_image_tag: "1.25.4"
 ocp4_workload_ocpsandbox_mcp_user_gitea_volume_size: 2Gi
@@ -53,7 +63,6 @@ ocp4_workload_ocpsandbox_mcp_user_gitea_repositories:
 # Gitea MCP Server
 # -------------------------------------------------------------------
 ocp4_workload_ocpsandbox_mcp_user_gitea_repo_path: tenant/mcp-gitea
-ocp4_workload_ocpsandbox_mcp_user_gitea_namespace_base: mcp-gitea
 ocp4_workload_ocpsandbox_mcp_user_gitea_image: docker.gitea.com/gitea-mcp-server:latest
 ocp4_workload_ocpsandbox_mcp_user_gitea_internal_url: "http://gitea.{{ ocp4_workload_ocpsandbox_mcp_user_gitea_namespace }}.svc.cluster.local:3000"
 ocp4_workload_ocpsandbox_mcp_user_gitea_repository: mcp
@@ -61,7 +70,6 @@ ocp4_workload_ocpsandbox_mcp_user_gitea_repository: mcp
 # -------------------------------------------------------------------
 # LibreChat
 # -------------------------------------------------------------------
-ocp4_workload_ocpsandbox_mcp_user_librechat_namespace_base: librechat
 ocp4_workload_ocpsandbox_mcp_user_librechat_repo: https://github.com/danny-avila/LibreChat
 ocp4_workload_ocpsandbox_mcp_user_librechat_repo_tag: v0.8.1
 ocp4_workload_ocpsandbox_mcp_user_librechat_repo_path: ./helm/librechat
@@ -73,7 +81,6 @@ ocp4_workload_ocpsandbox_mcp_user_librechat_password: ""
 # Agent
 # -------------------------------------------------------------------
 ocp4_workload_ocpsandbox_mcp_user_agent_repo_path: tenant/agent
-ocp4_workload_ocpsandbox_mcp_user_agent_namespace_base: agent
 ocp4_workload_ocpsandbox_mcp_user_agent_model_name: "openai/llama-scout-17b"
 
 # -------------------------------------------------------------------

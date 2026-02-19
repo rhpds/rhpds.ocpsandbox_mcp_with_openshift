@@ -13,19 +13,19 @@ spec:
       - user: {{ _ocpsandbox_mcp_user }}
   template:
     metadata:
-      name: "{{ ocp4_workload_ocpsandbox_mcp_user_librechat_namespace_base }}-{% raw %}{{ user }}{% endraw %}"
+      name: "librechat-{% raw %}{{ user }}{% endraw %}"
       namespace: openshift-gitops
       finalizers:
       - resources-finalizer.argocd.argoproj.io
     spec:
       destination:
         name: ""
-        namespace: "librechat-{% raw %}{{ user }}{% endraw %}"
+        namespace: "{{ ocp4_workload_ocpsandbox_mcp_user_librechat_namespace }}"
         server: https://kubernetes.default.svc
       project: {{ ocp4_workload_ocpsandbox_mcp_user_argocd_project }}
       syncPolicy:
         syncOptions:
-        - CreateNamespace=true
+        - CreateNamespace=false
         automated:
           prune: true
           selfHeal: false
@@ -58,16 +58,16 @@ spec:
                 mcpServers:
                   openshift:
                     type: sse
-                    url: "http://mcp-openshift-proxy.{{ ocp4_workload_ocpsandbox_mcp_user_openshift_namespace_base }}-{% raw %}{{ user }}{% endraw %}.svc.cluster.local:8080/sse#openshift"
+                    url: "http://mcp-openshift-proxy.{{ ocp4_workload_ocpsandbox_mcp_user_openshift_namespace }}.svc.cluster.local:8080/sse#openshift"
                   gitea:
                     type: streamable-http
-                    url: "http://mcp-gitea-proxy.{{ ocp4_workload_ocpsandbox_mcp_user_gitea_namespace_base }}-{% raw %}{{ user }}{% endraw %}.svc.cluster.local:8080/mcp"
+                    url: "http://mcp-gitea-proxy.{{ ocp4_workload_ocpsandbox_mcp_user_mcp_gitea_namespace }}.svc.cluster.local:8080/mcp"
                   fetch:
                     type: streamable-http
-                    url: "http://mcp-fetch-proxy.{{ ocp4_workload_ocpsandbox_mcp_user_gitea_namespace_base }}-{% raw %}{{ user }}{% endraw %}.svc.cluster.local:8080/mcp"
+                    url: "http://mcp-fetch-proxy.{{ ocp4_workload_ocpsandbox_mcp_user_mcp_gitea_namespace }}.svc.cluster.local:8080/mcp"
                   yardstick:
                     type: streamable-http
-                    url: "http://mcp-yardstick-proxy.{{ ocp4_workload_ocpsandbox_mcp_user_gitea_namespace_base }}-{% raw %}{{ user }}{% endraw %}.svc.cluster.local:8080/mcp"
+                    url: "http://mcp-yardstick-proxy.{{ ocp4_workload_ocpsandbox_mcp_user_mcp_gitea_namespace }}.svc.cluster.local:8080/mcp"
 
                 # Custom OpenAI-compatible endpoints
                 endpoints:

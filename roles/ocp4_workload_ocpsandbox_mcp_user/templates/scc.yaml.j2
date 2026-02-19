@@ -29,10 +29,10 @@ seLinuxContext:
 supplementalGroups:
   type: RunAsAny
 users:
-- system:serviceaccount:{{ ocp4_workload_ocpsandbox_mcp_user_openshift_namespace_base }}-{{ _ocpsandbox_mcp_user }}:openshift-sa
-- system:serviceaccount:{{ ocp4_workload_ocpsandbox_mcp_user_openshift_namespace_base }}-{{ _ocpsandbox_mcp_user }}:openshift-proxy-runner
-- system:serviceaccount:{{ ocp4_workload_ocpsandbox_mcp_user_gitea_namespace_base }}-{{ _ocpsandbox_mcp_user }}:gitea-sa
-- system:serviceaccount:{{ ocp4_workload_ocpsandbox_mcp_user_gitea_namespace_base }}-{{ _ocpsandbox_mcp_user }}:gitea-proxy-runner
+- system:serviceaccount:{{ ocp4_workload_ocpsandbox_mcp_user_openshift_namespace }}:openshift-sa
+- system:serviceaccount:{{ ocp4_workload_ocpsandbox_mcp_user_openshift_namespace }}:openshift-proxy-runner
+- system:serviceaccount:{{ ocp4_workload_ocpsandbox_mcp_user_mcp_gitea_namespace }}:gitea-sa
+- system:serviceaccount:{{ ocp4_workload_ocpsandbox_mcp_user_mcp_gitea_namespace }}:gitea-proxy-runner
 volumes:
 - configMap
 - downwardAPI

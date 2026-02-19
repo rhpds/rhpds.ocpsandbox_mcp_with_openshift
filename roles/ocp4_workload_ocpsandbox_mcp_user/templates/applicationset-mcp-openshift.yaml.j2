@@ -20,12 +20,12 @@ spec:
     spec:
       destination:
         name: ""
-        namespace: "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_namespace_base }}-{% raw %}{{ user }}{% endraw %}"
+        namespace: "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_namespace }}"
         server: https://kubernetes.default.svc
       project: {{ ocp4_workload_ocpsandbox_mcp_user_argocd_project }}
       syncPolicy:
         syncOptions:
-        - CreateNamespace=true
+        - CreateNamespace=false
         automated:
           prune: true
           selfHeal: false
@@ -37,5 +37,5 @@ spec:
           values: |
             fullnameOverride: mcp-openshift
             user: "{% raw %}{{ user }}{% endraw %}"
-            namespace: "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_namespace_base }}-{% raw %}{{ user }}{% endraw %}"
+            namespace: "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_namespace }}"
             image: {{ ocp4_workload_ocpsandbox_mcp_user_openshift_image }}

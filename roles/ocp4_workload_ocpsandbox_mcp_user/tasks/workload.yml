@@ -69,19 +69,8 @@
 
 # ==================================================================
 # Deploy per-user Gitea instance
+# Namespace is created by sandbox API (gitea_namespace variable)
 # ==================================================================
-- name: Create per-user Gitea namespace
-  kubernetes.core.k8s:
-    host: "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_api_url }}"
-    api_key: "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_api_token }}"
-    validate_certs: false
-    state: present
-    definition:
-      apiVersion: v1
-      kind: Namespace
-      metadata:
-        name: "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_namespace }}"
-
 - name: Deploy per-user Gitea instance
   kubernetes.core.k8s:
     host: "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_api_url }}"
@@ -252,10 +241,10 @@
       gitea_user: "{{ _ocpsandbox_mcp_user }}"
       gitea_password: "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_user_password }}"
       librechat_url: >-
-        https://librechat-{{ ocp4_workload_ocpsandbox_mcp_user_librechat_namespace_base }}-{{ _ocpsandbox_mcp_user }}.{{ openshift_cluster_ingress_domain }}
+        https://librechat-{{ ocp4_workload_ocpsandbox_mcp_user_librechat_namespace }}.{{ openshift_cluster_ingress_domain }}
       librechat_user: "{{ _ocpsandbox_mcp_user }}@{{ ocp4_workload_ocpsandbox_mcp_user_librechat_email_domain }}"
       librechat_password: "{{ ocp4_workload_ocpsandbox_mcp_user_librechat_password }}"
       openshift_mcp_server_url: >-
-        https://mcp-openshift-{{ ocp4_workload_ocpsandbox_mcp_user_openshift_namespace_base }}-{{ _ocpsandbox_mcp_user }}.{{ openshift_cluster_ingress_domain }}/sse#openshift
+        https://mcp-openshift-{{ ocp4_workload_ocpsandbox_mcp_user_openshift_namespace }}.{{ openshift_cluster_ingress_domain }}/sse#openshift
       gitea_mcp_server_url: >-
-        https://mcp-gitea-{{ ocp4_workload_ocpsandbox_mcp_user_gitea_namespace_base }}-{{ _ocpsandbox_mcp_user }}.{{ openshift_cluster_ingress_domain }}/mcp
+        https://mcp-gitea-{{ ocp4_workload_ocpsandbox_mcp_user_mcp_gitea_namespace }}.{{ openshift_cluster_ingress_domain }}/mcp

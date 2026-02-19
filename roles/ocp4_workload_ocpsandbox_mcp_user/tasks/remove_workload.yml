@@ -75,24 +75,9 @@
   delay: 10
 
 # ------------------------------------------------------------------
-# Clean up namespaces (in case ArgoCD didn't remove them)
+# Namespace cleanup is handled by sandbox API.
+# Roles only clean up external resources (LiteMaaS, SCC).
 # ------------------------------------------------------------------
-- name: Delete user namespaces
-  kubernetes.core.k8s:
-    host: "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_api_url }}"
-    api_key: "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_api_token }}"
-    validate_certs: false
-    api_version: v1
-    kind: Namespace
-    name: "{{ item }}"
-    state: absent
-  loop:
-  - "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_namespace_base }}-{{ _ocpsandbox_mcp_user }}"
-  - "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_namespace_base }}-{{ _ocpsandbox_mcp_user }}"
-  - "{{ ocp4_workload_ocpsandbox_mcp_user_librechat_namespace_base }}-{{ _ocpsandbox_mcp_user }}"
-  - "{{ ocp4_workload_ocpsandbox_mcp_user_agent_namespace_base }}-{{ _ocpsandbox_mcp_user }}"
-  - "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_namespace }}"
-  ignore_errors: true
 
 # ------------------------------------------------------------------
 # Delete SCC
