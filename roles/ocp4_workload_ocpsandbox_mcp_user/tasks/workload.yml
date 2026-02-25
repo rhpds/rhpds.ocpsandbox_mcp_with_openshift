@@ -162,6 +162,79 @@
   - applicationset-librechat.yaml.j2
   - applicationset-agent.yaml.j2
 
+# ==================================================================
+# Wait for ArgoCD Applications to reach Healthy status
+# ==================================================================
+- name: Wait for MCP ArgoCD applications to be healthy
+  kubernetes.core.k8s_info:
+    host: "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_api_url }}"
+    api_key: "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_api_token }}"
+    validate_certs: false
+    api_version: argoproj.io/v1alpha1
+    kind: Application
+    name: "{{ item }}"
+    namespace: openshift-gitops
+  register: r_app
+  until: >-
+    r_app.resources | length > 0
+    and r_app.resources[0].status.health.status == 'Healthy'
+  retries: 30
+  delay: 20
+  loop:
+  - "{{ _ocpsandbox_mcp_user }}-mcp-openshift"
+  - "{{ _ocpsandbox_mcp_user }}-mcp-gitea"
+  - "{{ _ocpsandbox_mcp_user }}-librechat"
+
+# ==================================================================
+# Wait for LibreChat pod to be Running
+# ==================================================================
+- name: Wait for LibreChat pod to be running
+  kubernetes.core.k8s_info:
+    host: "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_api_url }}"
+    api_key: "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_api_token }}"
+    validate_certs: false
+    api_version: v1
+    kind: Pod
+    namespace: "{{ ocp4_workload_ocpsandbox_mcp_user_librechat_namespace }}"
+    label_selectors:
+    - app=librechat
+  register: r_librechat_pod
+  until: >-
+    r_librechat_pod.resources | length > 0
+    and (r_librechat_pod.resources | selectattr('status.phase', 'eq', 'Running') | list | length) > 0
+  retries: 30
+  delay: 20
+
+# ==================================================================
+# Verify MCP server endpoints are reachable
+# ==================================================================
+- name: Verify OpenShift MCP server is reachable
+  ansible.builtin.uri:
+    url: >-
+      https://mcp-openshift-{{ ocp4_workload_ocpsandbox_mcp_user_openshift_namespace }}.{{ openshift_cluster_ingress_domain }}/health
+    method: GET
+    status_code: [200, 404]
+    validate_certs: true
+  register: r_mcp_openshift
+  retries: 15
+  delay: 20
+  until: r_mcp_openshift.status in [200, 404]
+
+- name: Verify Gitea MCP server is reachable
+  ansible.builtin.uri:
+    url: >-
+      https://mcp-gitea-{{ ocp4_workload_ocpsandbox_mcp_user_mcp_gitea_namespace }}.{{ openshift_cluster_ingress_domain }}/health
+    method: GET
+    status_code: [200, 404]
+    validate_certs: true
+  register: r_mcp_gitea
+  retries: 15
+  delay: 20
+  until: r_mcp_gitea.status in [200, 404]
+
+# ==================================================================
+# Save user information
+# ==================================================================
 - name: Save user information
   agnosticd.core.agnosticd_user_info:
     user: "{{ _ocpsandbox_mcp_user }}"
