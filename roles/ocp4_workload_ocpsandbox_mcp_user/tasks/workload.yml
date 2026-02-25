@@ -197,17 +197,17 @@
 # saving user info. Faster and more direct than waiting for ArgoCD
 # Healthy status, which can lag behind actual service availability.
 # ==================================================================
-- name: Verify LibreChat API is ready
+- name: Verify LibreChat API backend is ready
   ansible.builtin.uri:
     url: >-
-      https://librechat-{{ ocp4_workload_ocpsandbox_mcp_user_librechat_namespace }}.{{ openshift_cluster_ingress_domain }}/api/health
+      https://librechat-{{ ocp4_workload_ocpsandbox_mcp_user_librechat_namespace }}.{{ openshift_cluster_ingress_domain }}/api/user
     method: GET
-    status_code: [200]
+    status_code: [401]
     validate_certs: true
   register: r_librechat
   retries: 20
   delay: 30
-  until: r_librechat.status == 200
+  until: r_librechat.status == 401
 
 - name: Verify OpenShift MCP server is reachable
   ansible.builtin.uri:
