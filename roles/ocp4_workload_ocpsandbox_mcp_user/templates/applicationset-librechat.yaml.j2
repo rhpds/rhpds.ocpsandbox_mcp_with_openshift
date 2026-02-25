@@ -2,7 +2,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
-  name: librechat
+  name: "{{ _ocpsandbox_mcp_user }}-librechat"
   namespace: openshift-gitops
 spec:
   syncPolicy:

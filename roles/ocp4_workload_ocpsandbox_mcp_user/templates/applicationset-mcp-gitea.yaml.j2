@@ -2,7 +2,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
-  name: mcp-gitea
+  name: "{{ _ocpsandbox_mcp_user }}-mcp-gitea"
   namespace: openshift-gitops
 spec:
   syncPolicy:

@@ -2,7 +2,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
-  name: mcp-openshift
+  name: "{{ _ocpsandbox_mcp_user }}-mcp-openshift"
   namespace: openshift-gitops
 spec:
   syncPolicy:

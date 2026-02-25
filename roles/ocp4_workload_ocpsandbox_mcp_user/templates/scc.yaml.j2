@@ -2,7 +2,7 @@
 apiVersion: security.openshift.io/v1
 kind: SecurityContextConstraints
 metadata:
-  name: mcpserver-scc
+  name: "{{ _ocpsandbox_mcp_user }}-mcpserver-scc"
 allowHostDirVolumePlugin: false
 allowHostIPC: false
 allowHostNetwork: false

@@ -2,7 +2,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
-  name: agent
+  name: "{{ _ocpsandbox_mcp_user }}-agent"
   namespace: openshift-gitops
 spec:
   syncPolicy:

@@ -39,11 +39,11 @@
     namespace: openshift-gitops
     state: absent
   loop:
-  - agent
-  - librechat
-  - librechat-config
-  - mcp-gitea
-  - mcp-openshift
+  - "{{ _ocpsandbox_mcp_user }}-agent"
+  - "{{ _ocpsandbox_mcp_user }}-librechat"
+  - "{{ _ocpsandbox_mcp_user }}-librechat-config"
+  - "{{ _ocpsandbox_mcp_user }}-mcp-gitea"
+  - "{{ _ocpsandbox_mcp_user }}-mcp-openshift"
 
 # ------------------------------------------------------------------
 # Wait for ArgoCD Applications to be removed
@@ -85,6 +85,6 @@
     validate_certs: false
     api_version: security.openshift.io/v1
     kind: SecurityContextConstraints
-    name: mcpserver-scc
+    name: "{{ _ocpsandbox_mcp_user }}-mcpserver-scc"
     state: absent
   ignore_errors: true
