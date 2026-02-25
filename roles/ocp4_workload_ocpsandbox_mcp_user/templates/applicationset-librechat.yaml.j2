@@ -97,6 +97,16 @@ spec:
             ingress:
               enabled: false
 
+            # Resource requests/limits required by namespace quota
+            # (sandbox API limit_range shorthand doesn't populate LimitRange defaults)
+            resources:
+              requests:
+                cpu: 100m
+                memory: 256Mi
+              limits:
+                cpu: "2"
+                memory: 2Gi
+
             # Add writable volumes for logs
             volumes:
             - name: logs
