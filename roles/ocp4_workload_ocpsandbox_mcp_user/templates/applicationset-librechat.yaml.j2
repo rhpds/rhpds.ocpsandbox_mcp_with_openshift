@@ -140,6 +140,13 @@ spec:
               image:
                 repository: docker.io/getmeili/meilisearch
                 tag: v1.7.3
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 256Mi
+                limits:
+                  cpu: "1"
+                  memory: 1Gi
               podSecurityContext:
                 runAsNonRoot: false
                 runAsUser: null
