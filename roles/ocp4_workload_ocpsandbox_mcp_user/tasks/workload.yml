@@ -125,7 +125,7 @@
     kind: Namespace
     label_selectors:
     - "created-by=sandbox-api"
-    - "guid={{ guid }}"
+    - "guid={{ sandbox_openshift_namespace | regex_replace('^sandbox-([^-]+)-.*', '\\1') }}"
   register: r_sandbox_namespaces
 
 - name: Set namespace facts from discovered sandbox namespaces
@@ -141,7 +141,7 @@
          | select('match', '.*-mcp-openshift$') | list | first }}
     ocp4_workload_ocpsandbox_mcp_user_gitea_namespace: >-
       {{ r_sandbox_namespaces.resources | map(attribute='metadata.name')
-         | select('match', '.*-gitea$') | list | first }}
+         | select('match', '.*-[0-9]+-gitea$') | list | first }}
 
 # ==================================================================
 # Create ArgoCD ApplicationSets
