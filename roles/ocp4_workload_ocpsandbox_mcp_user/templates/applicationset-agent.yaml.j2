@@ -44,7 +44,7 @@ spec:
 
             git_url: "{{ ocp4_workload_ocpsandbox_mcp_user_gitea_internal_url }}/{% raw %}{{ user }}{% endraw %}/mcp.git"
             git_revision: main
-            git_subdirectory: agent
+            git_subdirectory: infra
             agent_endpoint: "http://agent.{{ ocp4_workload_ocpsandbox_mcp_user_agent_namespace }}.svc:8000/report-failure"
 
             # Agent Configuration
