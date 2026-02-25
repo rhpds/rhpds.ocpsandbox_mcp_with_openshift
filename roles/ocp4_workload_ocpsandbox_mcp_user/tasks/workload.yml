@@ -111,26 +111,8 @@
     _ocpsandbox_mcp_librechat_key16: "{{ lookup('password', '/dev/null chars=hexdigits length=16') | lower }}"
 
 # ==================================================================
-# Ensure namespaces exist (fallback if sandbox API didn't create them)
-# ==================================================================
-- name: Ensure MCP namespaces exist
-  kubernetes.core.k8s:
-    host: "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_api_url }}"
-    api_key: "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_api_token }}"
-    validate_certs: false
-    state: present
-    definition:
-      apiVersion: v1
-      kind: Namespace
-      metadata:
-        name: "{{ item }}"
-  loop:
-  - "{{ ocp4_workload_ocpsandbox_mcp_user_librechat_namespace }}"
-  - "{{ ocp4_workload_ocpsandbox_mcp_user_mcp_gitea_namespace }}"
-  - "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_namespace }}"
-
-# ==================================================================
 # Create ArgoCD ApplicationSets
+# All namespaces are created by the sandbox API (cluster_condition: same(cluster))
 # ==================================================================
 - name: Create MCP lab components
   kubernetes.core.k8s:

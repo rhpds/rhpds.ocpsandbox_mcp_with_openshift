@@ -75,27 +75,8 @@
   delay: 10
 
 # ------------------------------------------------------------------
-# Delete namespaces created by this role as fallback.
-# If sandbox API created the namespace, it will also try to delete it
-# which is fine -- one of the two deletions will be a no-op.
-# ------------------------------------------------------------------
-- name: Delete fallback namespaces
-  kubernetes.core.k8s:
-    host: "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_api_url }}"
-    api_key: "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_api_token }}"
-    validate_certs: false
-    api_version: v1
-    kind: Namespace
-    name: "{{ item }}"
-    state: absent
-  loop:
-  - "{{ ocp4_workload_ocpsandbox_mcp_user_librechat_namespace }}"
-  - "{{ ocp4_workload_ocpsandbox_mcp_user_mcp_gitea_namespace }}"
-  - "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_namespace }}"
-  ignore_errors: true
-
-# ------------------------------------------------------------------
 # Delete SCC
+# All namespaces are managed by the sandbox API and deleted automatically.
 # ------------------------------------------------------------------
 - name: Delete SCC
   kubernetes.core.k8s:
