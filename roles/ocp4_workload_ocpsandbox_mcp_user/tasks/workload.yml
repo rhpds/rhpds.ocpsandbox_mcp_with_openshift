@@ -111,69 +111,6 @@
     _ocpsandbox_mcp_librechat_key16: "{{ lookup('password', '/dev/null chars=hexdigits length=16') | lower }}"
 
 # ==================================================================
-# Discover sandbox-created namespaces via guid label.
-# The 'var' key in common.yaml sandboxes is not yet implemented in
-# the sandbox API or AgnosticD, so namespace names are discovered
-# from the cluster rather than relying on variable injection.
-# ==================================================================
-- name: Find all sandbox-created namespaces for this order
-  kubernetes.core.k8s_info:
-    host: "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_api_url }}"
-    api_key: "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_api_token }}"
-    validate_certs: false
-    api_version: v1
-    kind: Namespace
-    label_selectors:
-    - "created-by=sandbox-api"
-    - "guid={{ sandbox_openshift_namespace | regex_replace('^sandbox-([^-]+)-.*', '\\1') }}"
-  register: r_sandbox_namespaces
-
-- name: Set namespace facts from discovered sandbox namespaces
-  ansible.builtin.set_fact:
-    ocp4_workload_ocpsandbox_mcp_user_librechat_namespace: >-
-      {{ r_sandbox_namespaces.resources | map(attribute='metadata.name')
-         | select('match', '.*-librechat$') | list | first }}
-    ocp4_workload_ocpsandbox_mcp_user_mcp_gitea_namespace: >-
-      {{ r_sandbox_namespaces.resources | map(attribute='metadata.name')
-         | select('match', '.*-mcp-gitea$') | list | first }}
-    ocp4_workload_ocpsandbox_mcp_user_openshift_namespace: >-
-      {{ r_sandbox_namespaces.resources | map(attribute='metadata.name')
-         | select('match', '.*-mcp-openshift$') | list | first }}
-    ocp4_workload_ocpsandbox_mcp_user_gitea_namespace: >-
-      {{ r_sandbox_namespaces.resources | map(attribute='metadata.name')
-         | select('match', '.*-[0-9]+-gitea$') | list | first }}
-
-# ==================================================================
-# Patch LimitRange in all sandbox namespaces with container defaults.
-# The sandbox API creates a LimitRange (sandbox-limit-range) but with
-# limits: null. This patch adds proper defaults so that any container
-# without explicit resources (e.g. Tekton init containers) gets them
-# automatically, satisfying the namespace quota enforcement.
-# ==================================================================
-- name: Patch LimitRange with container defaults in all sandbox namespaces
-  kubernetes.core.k8s:
-    host: "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_api_url }}"
-    api_key: "{{ ocp4_workload_ocpsandbox_mcp_user_openshift_api_token }}"
-    validate_certs: false
-    state: present
-    definition:
-      apiVersion: v1
-      kind: LimitRange
-      metadata:
-        name: sandbox-limit-range
-        namespace: "{{ item }}"
-      spec:
-        limits:
-        - type: Container
-          default:
-            cpu: 500m
-            memory: 512Mi
-          defaultRequest:
-            cpu: 50m
-            memory: 128Mi
-  loop: "{{ r_sandbox_namespaces.resources | map(attribute='metadata.name') | list }}"
-
-# ==================================================================
 # Create ArgoCD ApplicationSets
 # All namespaces are created by the sandbox API (cluster_condition: same(cluster))
 # ==================================================================
