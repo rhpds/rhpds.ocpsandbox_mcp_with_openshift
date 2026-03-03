@@ -31,13 +31,15 @@
     common_password: "{{ (guid[:5] | hash('md5') | int(base=16) | b64encode)[:8] }}"
 
     # ---------------------------------------------------------------
-    # Keycloak (deploy RHBK + configure as OCP OAuth)
+    # Authentication (deploy RHBK + configure as OCP OAuth)
+    # Using ocp4_workload_authentication with provider: keycloak
     # ---------------------------------------------------------------
-    ocp4_workload_authentication_keycloak_realm: openshift
-    ocp4_workload_authentication_keycloak_admin_user: admin
-    ocp4_workload_authentication_keycloak_admin_password: "{{ common_password }}"
-    ocp4_workload_authentication_keycloak_user_count: 0
-    ocp4_workload_authentication_keycloak_remove_kubeadmin: false
+    ocp4_workload_authentication_provider: keycloak
+    ocp4_workload_authentication_admin_username: admin
+    ocp4_workload_authentication_admin_password: "{{ common_password }}"
+    ocp4_workload_authentication_remove_kubeadmin: false
+    ocp4_workload_authentication_keycloak_default_realm: sso
+    ocp4_workload_authentication_num_users: 0       # no lab users -- created per-order by tenant_keycloak_user role
 
     # Set to true on shared clusters to preserve existing OAuth IdPs
     # (e.g. sso-internal, rhsso) that the keycloak role would otherwise replace
@@ -204,7 +206,7 @@
 
   - name: "Step 1b: Deploy Keycloak authentication"
     ansible.builtin.include_role:
-      name: agnosticd.core_workloads.ocp4_workload_authentication_keycloak
+      name: agnosticd.core_workloads.ocp4_workload_authentication
 
   - name: "Step 1c: Restore existing OAuth identity providers"
     when: preserve_existing_oauth_idps | default(false) | bool
