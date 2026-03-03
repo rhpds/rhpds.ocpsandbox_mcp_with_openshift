@@ -27,7 +27,7 @@
     # ---------------------------------------------------------------
     # Common
     # ---------------------------------------------------------------
-    common_password: "{{ (guid[:5] | hash('md5') | int(base=16) | b64encode)[:8] }}"
+    common_password: "{{ lookup('password', '/dev/null chars=ascii_letters,digits length=12') }}"
 
     # ---------------------------------------------------------------
     # Tenant username -- used by all tenant roles
@@ -40,6 +40,8 @@
     ocp4_workload_tenant_keycloak_username: "mcpuser-{{ guid }}"
 
     # ---------------------------------------------------------------
+    ocp4_workload_tenant_keycloak_user_password: "{{ common_password }}"
+
     # Workload: ocp4_workload_tenant_namespace
     # ---------------------------------------------------------------
     ocp4_workload_tenant_namespace_prefix: "{{ ocp4_workload_tenant_keycloak_username }}"
