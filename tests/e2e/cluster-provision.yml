@@ -278,38 +278,9 @@
       name: agnosticd.ai_workloads.ocp4_workload_toolhive
 
   # ===================================================================
-  # Step 6: Enable user workload monitoring (for Module 3 telemetry)
+  # Step 6: User workload monitoring -- now managed by GitOps
+  # See infra/platform/monitoring.yaml in ocpsandbox-mcp-with-openshift-gitops
   # ===================================================================
-  - name: "Step 6: Check if user workload monitoring is enabled"
-    kubernetes.core.k8s_info:
-      api_version: v1
-      kind: ConfigMap
-      name: cluster-monitoring-config
-      namespace: openshift-monitoring
-    register: r_monitoring_config
-
-  - name: "Step 6: Enable user workload monitoring"
-    kubernetes.core.k8s:
-      state: present
-      definition:
-        apiVersion: v1
-        kind: ConfigMap
-        metadata:
-          name: cluster-monitoring-config
-          namespace: openshift-monitoring
-        data:
-          config.yaml: |
-            enableUserWorkload: true
-    when: >-
-      r_monitoring_config.resources | length == 0 or
-      'enableUserWorkload: true' not in (r_monitoring_config.resources[0].data['config.yaml'] | default(''))
-
-  - name: "Step 6: User workload monitoring already enabled -- skipping"
-    ansible.builtin.debug:
-      msg: "cluster-monitoring-config already has enableUserWorkload: true -- preserving existing config"
-    when: >-
-      r_monitoring_config.resources | length > 0 and
-      'enableUserWorkload: true' in (r_monitoring_config.resources[0].data['config.yaml'] | default(''))
 
   - name: "Step 6b: Enable dev perspective in OpenShift console"
     kubernetes.core.k8s:
