@@ -266,13 +266,13 @@
       name: agnosticd.core_workloads.ocp4_workload_openshift_gitops
 
   # ===================================================================
-  # Step 4b: GitOps Bootstrap (Infra layer)
+  # Step 4b: Apply infra bootstrap manifests (plain YAML, no plugin)
   # Creates platform/infra/tenants AppProjects + platform Application
-  # Requires kustomize-envvar plugin enabled on ArgoCD (step 4)
   # ===================================================================
-  - name: "Step 4b: Bootstrap infra AppProjects via GitOps"
-    ansible.builtin.include_role:
-      name: agnosticd.core_workloads.ocp4_workload_gitops_bootstrap
+  - name: "Step 4b: Apply infra AppProjects and platform Application"
+    kubernetes.core.k8s:
+      state: present
+      src: "https://raw.githubusercontent.com/rhpds/ocpsandbox-mcp-with-openshift-gitops/main/infra/bootstrap/appprojects.yaml"
 
   # ===================================================================
   # Step 5: ToolHive
