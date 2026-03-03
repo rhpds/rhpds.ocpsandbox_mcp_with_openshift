@@ -80,6 +80,7 @@
     ocp4_workload_openshift_gitops_channel: gitops-1.19
     ocp4_workload_openshift_gitops_setup_cluster_admin: true
     ocp4_workload_openshift_gitops_update_route_tls: true
+    ocp4_workload_openshift_gitops_kustomize_plugin: true     # required for gitops_bootstrap
     ocp4_workload_openshift_gitops_use_catalog_snapshot: false
     ocp4_workload_openshift_gitops_rbac_update: true
     ocp4_workload_openshift_gitops_rbac_policy: |
@@ -265,13 +266,13 @@
       name: agnosticd.core_workloads.ocp4_workload_openshift_gitops
 
   # ===================================================================
-  # Step 4b: Create infra AppProjects and platform Application
-  # Applied directly -- infra bootstrap needs no templating
+  # Step 4b: GitOps Bootstrap (Infra layer)
+  # Creates platform/infra/tenants AppProjects + platform Application
+  # Requires kustomize-envvar plugin enabled on ArgoCD (step 4)
   # ===================================================================
-  - name: "Step 4b: Apply infra AppProjects and platform Application"
-    kubernetes.core.k8s:
-      state: present
-      definition: "{{ lookup('url', 'https://raw.githubusercontent.com/rhpds/ocpsandbox-mcp-with-openshift-gitops/main/infra/bootstrap/appprojects.yaml', split_lines=False) | from_yaml_all | list }}"
+  - name: "Step 4b: Bootstrap infra AppProjects via GitOps"
+    ansible.builtin.include_role:
+      name: agnosticd.core_workloads.ocp4_workload_gitops_bootstrap
 
   # ===================================================================
   # Step 5: ToolHive
