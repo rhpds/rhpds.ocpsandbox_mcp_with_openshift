@@ -1,73 +1,76 @@
 ---
-# End-to-end test: User Provisioner flow for MCP with OpenShift (sandbox model)
+# End-to-end test: Tenant provisioner flow (new pattern)
 #
-# Simulates the config:namespace user provisioner catalog item.
-# Runs all per-user roles in sequence against an existing cluster
-# that already has shared infra (Keycloak, Gitea, ArgoCD, Pipelines, ToolHive).
+# Uses tenant roles: keycloak_user, namespace, gitea, litellm, gitops_bootstrap, showroom
+# Runs against an existing cluster with shared infra already deployed.
 #
 # Usage:
-#   ANSIBLE_COLLECTIONS_PATH="$HOME/work/code/ansible_collections:$HOME/.ansible/collections" \
-#   ANSIBLE_ROLES_PATH="$HOME/work/code/agnosticd-v2/ansible/roles" \
-#   ~/work/ansible-for-me/bin/ansible-playbook tests/e2e/provision.yml -v
-#
-# To override vars:
-#   ... -e guid=xxxxx -e cluster_admin_agnosticd_sa_token=sha256~xxxxx
+#   bash tests/e2e/run.sh provision -e guid=test01 -e cluster_admin_agnosticd_sa_token=sha256~xxx
 
-- name: "E2E Test: MCP with OpenShift User Provisioner"
+- name: "E2E Test: MCP with OpenShift Tenant Provisioner"
   hosts: localhost
   gather_facts: false
   become: false
 
   vars:
     ACTION: provision
-    guid: "{{ lookup('env', 'GUID') | default('changeme', true) }}"
+    guid: "{{ lookup('env', 'GUID') | default('test01', true) }}"
     output_dir: "{{ playbook_dir }}/output"
 
     # ---------------------------------------------------------------
-    # Cluster connection (sandbox-like vars)
+    # Cluster connection
     # ---------------------------------------------------------------
-    # Override via: -e guid=xxxxx -e cluster_admin_agnosticd_sa_token=xxxxx
-    # Or use a local secrets file: -e @tests/e2e/secrets.yml
-    sandbox_openshift_api_url: "https://api.cluster-{{ guid }}.dynamic.redhatworkshops.io:6443"
+    sandbox_openshift_api_url: "https://api.cnv-us-east-ocp-3.rhdp.net:6443"
     cluster_admin_agnosticd_sa_token: "{{ lookup('env', 'CLUSTER_ADMIN_TOKEN') | default('REPLACE_ME', true) }}"
+    sandbox_openshift_namespace: "sandbox-{{ guid }}"
 
     # ---------------------------------------------------------------
     # Common
     # ---------------------------------------------------------------
     common_password: "{{ (guid[:5] | hash('md5') | int(base=16) | b64encode)[:8] }}"
-    test_username: "user1-{{ guid }}"
 
     # ---------------------------------------------------------------
-    # Step 1: Keycloak user
+    # Tenant username -- used by all tenant roles
     # ---------------------------------------------------------------
-    ocp4_workload_ocpsandbox_keycloak_user_username: "{{ test_username }}"
-    ocp4_workload_ocpsandbox_keycloak_user_password: "{{ common_password }}"
-    ocp4_workload_ocpsandbox_keycloak_user_keycloak_realm: sso
+    ocp4_workload_tenant_keycloak_username: "mcpuser-{{ guid }}"
 
     # ---------------------------------------------------------------
-    # Step 2: Gitea user
+    # Workload: ocp4_workload_tenant_keycloak_user
     # ---------------------------------------------------------------
-    ocp4_workload_ocpsandbox_gitea_user_username: "{{ test_username }}"
-    ocp4_workload_ocpsandbox_gitea_user_password: "{{ common_password }}"
-    ocp4_workload_ocpsandbox_gitea_user_repositories:
+    ocp4_workload_tenant_keycloak_username: "mcpuser-{{ guid }}"
+
+    # ---------------------------------------------------------------
+    # Workload: ocp4_workload_tenant_namespace
+    # ---------------------------------------------------------------
+    ocp4_workload_tenant_namespace_prefix: "{{ ocp4_workload_tenant_keycloak_username }}"
+    ocp4_workload_tenant_namespace_suffixes:
+    - librechat
+    - mcp-gitea
+    - mcp-openshift
+    - gitea
+    - showroom
+    ocp4_workload_tenant_namespace_limit_range:
+      default:
+        cpu: 500m
+        memory: 512Mi
+      defaultRequest:
+        cpu: 50m
+        memory: 128Mi
+
+    # ---------------------------------------------------------------
+    # Workload: ocp4_workload_tenant_gitea
+    # ---------------------------------------------------------------
+    ocp4_workload_tenant_gitea_namespace: "gitea-{{ ocp4_workload_tenant_keycloak_username }}"
+    ocp4_workload_tenant_gitea_admin_password: "{{ common_password }}"
+    ocp4_workload_tenant_gitea_username: "{{ ocp4_workload_tenant_keycloak_username }}"
+    ocp4_workload_tenant_gitea_password: "{{ common_password }}"
+    ocp4_workload_tenant_gitea_repositories:
     - name: mcp
       repo: https://github.com/rhpds/ocpsandbox-mcp-with-openshift-gitops
       private: false
 
     # ---------------------------------------------------------------
-    # Step 3: ArgoCD AppProject
-    # ---------------------------------------------------------------
-    ocp4_workload_ocpsandbox_argocd_user_username: "{{ test_username }}"
-    ocp4_workload_ocpsandbox_argocd_user_cluster_resource_whitelist:
-    - group: ""
-      kind: Namespace
-    - group: rbac.authorization.k8s.io
-      kind: ClusterRole
-    - group: rbac.authorization.k8s.io
-      kind: ClusterRoleBinding
-
-    # ---------------------------------------------------------------
-    # Step 4: LiteLLM virtual key
+    # Workload: ocp4_workload_litellm_virtual_keys
     # ---------------------------------------------------------------
     litellm_url: "https://litellm-prod.apps.maas.redhatworkshops.io"
     litellm_master_key: "{{ lookup('env', 'LITELLM_MASTER_KEY') | default('REPLACE_ME', true) }}"
@@ -80,23 +83,23 @@
     ocp4_workload_litellm_virtual_keys_verify_ssl: true
 
     # ---------------------------------------------------------------
-    # Step 5: MCP user (sandbox role)
+    # Workload: ocp4_workload_gitops_bootstrap
     # ---------------------------------------------------------------
-    ocp4_workload_ocpsandbox_mcp_user_username: "{{ test_username }}"
-    ocp4_workload_ocpsandbox_mcp_user_gitea_user_password: "{{ common_password }}"
-    ocp4_workload_ocpsandbox_mcp_user_librechat_password: "{{ common_password }}"
-    ocp4_workload_ocpsandbox_mcp_user_agent_model_name: "openai/qwen3-14b"
-    ocp4_workload_ocpsandbox_mcp_user_metrics_enable: false
-    ocp4_workload_ocpsandbox_mcp_user_cloud_native_postgresql_operator_enable: false
-    ocp4_workload_ocpsandbox_mcp_user_gitops_repo_tag: main
+    ocp4_workload_gitops_bootstrap_application_name: "bootstrap-tenant"
+    ocp4_workload_gitops_bootstrap_repo_revision: main
+    ocp4_workload_gitops_bootstrap_helm_values:
+      tenant:
+        username: "{{ ocp4_workload_tenant_keycloak_username }}"
 
     # ---------------------------------------------------------------
-    # Step 6-7: Showroom
+    # Workload: ocp4_workload_showroom
     # ---------------------------------------------------------------
+    openshift_api_url: "{{ sandbox_openshift_api_url }}"
     openshift_cluster_admin_token: "{{ cluster_admin_agnosticd_sa_token }}"
+    ocp4_workload_showroom_namespace: "showroom-{{ ocp4_workload_tenant_keycloak_username }}"
     ocp4_workload_showroom_content_git_repo: https://github.com/rhpds/lb1726-mcp-showroom
-    ocp4_workload_showroom_content_git_repo_ref: main
-    ocp4_workload_showroom_content_only: true
+    ocp4_workload_showroom_content_git_repo_ref: sandbox-login-instructions
+    ocp4_workload_showroom_content_only: false
 
   tasks:
   - name: Create output directory
@@ -105,85 +108,89 @@
       state: directory
       mode: "0755"
 
+  - name: Discover cluster ingress domain
+    kubernetes.core.k8s_info:
+      host: "{{ sandbox_openshift_api_url }}"
+      api_key: "{{ cluster_admin_agnosticd_sa_token }}"
+      validate_certs: false
+      api_version: config.openshift.io/v1
+      kind: Ingress
+      name: cluster
+    register: r_ingress
+
+  - name: Set ingress domain fact
+    ansible.builtin.set_fact:
+      openshift_cluster_ingress_domain: "{{ r_ingress.resources[0].spec.domain }}"
+
+  - name: "Debug: cluster info"
+    ansible.builtin.debug:
+      msg:
+        guid: "{{ guid }}"
+        username: "{{ ocp4_workload_tenant_keycloak_username }}"
+        ingress_domain: "{{ openshift_cluster_ingress_domain }}"
+
   # ===================================================================
-  # Step 1: Keycloak user (kubeconfig + cluster discovery + user)
+  # Step 1: Create RHBK user
   # ===================================================================
-  - name: "Step 1: Create Keycloak user and set up kubeconfig"
+  - name: "Step 1: Create Keycloak (RHBK) user"
     ansible.builtin.include_role:
-      name: agnosticd.namespaced_workloads.ocp4_workload_ocpsandbox_keycloak_user
-
-  - name: "Verify: openshift_cluster_ingress_domain is set"
-    ansible.builtin.assert:
-      that: openshift_cluster_ingress_domain is defined and openshift_cluster_ingress_domain | length > 0
-      fail_msg: "keycloak_user role did not set openshift_cluster_ingress_domain"
+      name: agnosticd.namespaced_workloads.ocp4_workload_tenant_keycloak_user
 
   # ===================================================================
-  # Step 2: Gitea user (create user + migrate repos)
+  # Step 2: Create tenant namespaces
   # ===================================================================
-  - name: "Step 2: Create Gitea user and migrate repositories"
+  - name: "Step 2: Create tenant namespaces"
     ansible.builtin.include_role:
-      name: agnosticd.namespaced_workloads.ocp4_workload_ocpsandbox_gitea_user
+      name: agnosticd.namespaced_workloads.ocp4_workload_tenant_namespace
 
   # ===================================================================
-  # Step 3: ArgoCD AppProject
+  # Step 3: Deploy Gitea instance + create user + migrate repos
   # ===================================================================
-  - name: "Step 3: Create ArgoCD AppProject"
+  - name: "Step 3: Deploy Gitea and create user"
     ansible.builtin.include_role:
-      name: agnosticd.namespaced_workloads.ocp4_workload_ocpsandbox_argocd_user
+      name: agnosticd.namespaced_workloads.ocp4_workload_tenant_gitea
 
   # ===================================================================
-  # Step 4: LiteLLM virtual key
+  # Step 4: LiteMaaS virtual key
   # ===================================================================
-  - name: "Step 4: Create LiteLLM virtual key"
+  - name: "Step 4: Create LiteMaaS virtual key"
     ansible.builtin.include_role:
       name: rhpds.litellm_virtual_keys.ocp4_workload_litellm_virtual_keys
 
-  # Bridge litellm output facts to ocpsandbox mcp_user variables
-  - name: Set MCP user LiteMaaS variables from LiteLLM output
+  # ===================================================================
+  # Step 5: GitOps bootstrap (tenant app-of-apps)
+  # ===================================================================
+  - name: Set gitops_bootstrap repo URL from gitea_url fact
     ansible.builtin.set_fact:
-      ocp4_workload_ocpsandbox_mcp_user_litemaas_url: "{{ litellm_api_endpoint }}/v1"
-      ocp4_workload_ocpsandbox_mcp_user_litemaas_key: "{{ litellm_virtual_key }}"
-      ocp4_workload_ocpsandbox_mcp_user_litemaas_models: "{{ litellm_available_models }}"
+      ocp4_workload_gitops_bootstrap_repo_url: >-
+        {{ gitea_url }}/{{ ocp4_workload_tenant_keycloak_username }}/mcp.git
+      ocp4_workload_gitops_bootstrap_helm_values:
+        tenant:
+          username: "{{ ocp4_workload_tenant_keycloak_username }}"
+        deployer:
+          domain: "{{ openshift_cluster_ingress_domain }}"
+          litemaas_url: "{{ litellm_api_endpoint }}/v1"
+          litemaas_key: "{{ litellm_virtual_key }}"
 
-  - name: "Debug: LiteMaaS config for MCP user"
-    ansible.builtin.debug:
-      msg:
-        litemaas_url: "{{ ocp4_workload_ocpsandbox_mcp_user_litemaas_url }}"
-        litemaas_models: "{{ ocp4_workload_ocpsandbox_mcp_user_litemaas_models }}"
-        litemaas_key_prefix: "{{ ocp4_workload_ocpsandbox_mcp_user_litemaas_key[:10] }}..."
-
-  # ===================================================================
-  # Step 5: MCP user (ApplicationSets, LibreChat, Agent)
-  # ===================================================================
-  - name: "Step 5: Deploy MCP user components"
+  - name: "Step 5: Bootstrap tenant GitOps"
     ansible.builtin.include_role:
-      name: rhpds.ocpsandbox_mcp_with_openshift.ocp4_workload_ocpsandbox_mcp_user
+      name: agnosticd.core_workloads.ocp4_workload_gitops_bootstrap
 
   # ===================================================================
-  # Step 6: Showroom OCP integration (ConsoleLinks)
+  # Step 6: Showroom
   # ===================================================================
-  - name: "Step 6: Configure Showroom OCP integration"
-    ansible.builtin.include_role:
-      name: agnosticd.showroom.ocp4_workload_showroom_ocp_integration
-
-  # ===================================================================
-  # Step 7: Showroom content deployment
-  # ===================================================================
-  - name: "Step 7: Deploy Showroom"
+  - name: "Step 6: Deploy Showroom"
     ansible.builtin.include_role:
       name: agnosticd.showroom.ocp4_workload_showroom
 
   # ===================================================================
   # Summary
   # ===================================================================
-  - name: "E2E Test Complete - Summary"
+  - name: "E2E Test Complete"
     ansible.builtin.debug:
       msg:
-      - "User: {{ test_username }}"
-      - "OpenShift Console: {{ openshift_console_url | default('unknown') }}"
-      - "Ingress Domain: {{ openshift_cluster_ingress_domain | default('unknown') }}"
-      - "LibreChat: https://librechat-librechat-{{ test_username }}.{{ openshift_cluster_ingress_domain }}"
-      - "MCP OpenShift: https://mcp-openshift-mcp-openshift-{{ test_username }}.{{ openshift_cluster_ingress_domain }}/sse"
-      - "MCP Gitea: https://mcp-gitea-mcp-gitea-{{ test_username }}.{{ openshift_cluster_ingress_domain }}/mcp"
-      - "ArgoCD Project: appproject-{{ test_username }}"
-      - "Showroom: https://showroom-showroom-{{ guid }}-{{ test_username }}.{{ openshift_cluster_ingress_domain }}"
+      - "Username:    {{ ocp4_workload_tenant_keycloak_username }}"
+      - "Password:    {{ common_password }}"
+      - "LibreChat:   https://librechat-librechat-{{ ocp4_workload_tenant_keycloak_username }}.{{ openshift_cluster_ingress_domain }}"
+      - "Gitea:       https://gitea-gitea-{{ ocp4_workload_tenant_keycloak_username }}.{{ openshift_cluster_ingress_domain }}"
+      - "Showroom:    https://showroom-showroom-{{ ocp4_workload_tenant_keycloak_username }}.{{ openshift_cluster_ingress_domain }}"
