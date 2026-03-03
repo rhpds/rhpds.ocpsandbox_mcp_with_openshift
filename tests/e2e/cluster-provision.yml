@@ -99,19 +99,24 @@
     ocp4_workload_openshift_gitops_per_user_access: false
 
     # ---------------------------------------------------------------
-    # GitOps Bootstrap -- Infra layer (platform/infra/tenants AppProjects)
-    # Points to infra/bootstrap/ in GitOps repo which creates:
-    #   - platform AppProject (cluster platform resources)
-    #   - infra AppProject    (lab infrastructure resources)
-    #   - tenants AppProject  (shared project for all tenant orders)
+    # GitOps Bootstrap -- one call creates both infra and platform bootstraps
     # ---------------------------------------------------------------
-    ocp4_workload_gitops_bootstrap_application_name: bootstrap-infra
     ocp4_workload_gitops_bootstrap_repo_url: "https://github.com/rhpds/ocpsandbox-mcp-with-openshift-gitops.git"
-    ocp4_workload_gitops_bootstrap_repo_revision: main
-    ocp4_workload_gitops_bootstrap_helm_values:
-      deployer:
-        domain: "{{ openshift_cluster_ingress_domain }}"
-        guid: "{{ guid }}"
+    ocp4_workload_gitops_bootstrap_applications:
+    - name: bootstrap-infra
+      path: infra/bootstrap
+      project: default
+      helm_values:
+        deployer:
+          domain: "{{ openshift_cluster_ingress_domain }}"
+          guid: "{{ guid }}"
+    - name: bootstrap-platform
+      path: platform/bootstrap
+      project: platform
+      helm_values:
+        deployer:
+          domain: "{{ openshift_cluster_ingress_domain }}"
+          guid: "{{ guid }}"
 
     # ---------------------------------------------------------------
     # ToolHive (versions from production catalog: agnosticv/agd_v2/mcp-with-openshift/common.yaml)
