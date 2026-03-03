@@ -96,6 +96,17 @@
     ocp4_workload_openshift_gitops_per_user_access: false
 
     # ---------------------------------------------------------------
+    # GitOps Bootstrap -- Infra layer (platform/infra/tenants AppProjects)
+    # Points to infra/bootstrap/ in GitOps repo which creates:
+    #   - platform AppProject (cluster platform resources)
+    #   - infra AppProject    (lab infrastructure resources)
+    #   - tenants AppProject  (shared project for all tenant orders)
+    # ---------------------------------------------------------------
+    ocp4_workload_gitops_bootstrap_application_name: bootstrap-infra
+    ocp4_workload_gitops_bootstrap_repo_url: "https://github.com/rhpds/ocpsandbox-mcp-with-openshift-gitops.git"
+    ocp4_workload_gitops_bootstrap_repo_revision: main
+
+    # ---------------------------------------------------------------
     # ToolHive (versions from production catalog: agnosticv/agd_v2/mcp-with-openshift/common.yaml)
     # ---------------------------------------------------------------
     ocp4_workload_toolhive_helm_chart_crds: oci://ghcr.io/stacklok/toolhive/toolhive-operator-crds:0.0.106
@@ -250,6 +261,14 @@
   - name: "Step 4: Deploy OpenShift GitOps"
     ansible.builtin.include_role:
       name: agnosticd.core_workloads.ocp4_workload_openshift_gitops
+
+  # ===================================================================
+  # Step 4b: GitOps Bootstrap (Infra layer)
+  # Creates platform/infra/tenants AppProjects via app-of-apps
+  # ===================================================================
+  - name: "Step 4b: Bootstrap infra AppProjects via GitOps"
+    ansible.builtin.include_role:
+      name: agnosticd.core_workloads.ocp4_workload_gitops_bootstrap
 
   # ===================================================================
   # Step 5: ToolHive
