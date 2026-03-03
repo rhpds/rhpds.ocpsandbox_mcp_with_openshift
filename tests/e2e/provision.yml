@@ -25,9 +25,9 @@
     sandbox_openshift_namespace: "sandbox-{{ guid }}"
 
     # ---------------------------------------------------------------
-    # Common
+    # Common — deterministic password from guid so it's stable across evaluations
     # ---------------------------------------------------------------
-    common_password: "{{ lookup('password', '/dev/null chars=ascii_letters,digits length=12') }}"
+    common_password: "{{ (guid | hash('md5'))[:12] }}"
 
     # ---------------------------------------------------------------
     # Tenant username -- used by all tenant roles
