@@ -265,12 +265,13 @@
       name: agnosticd.core_workloads.ocp4_workload_openshift_gitops
 
   # ===================================================================
-  # Step 4b: GitOps Bootstrap (Infra layer)
-  # Creates platform/infra/tenants AppProjects via app-of-apps
+  # Step 4b: Create infra AppProjects and platform Application
+  # Applied directly -- infra bootstrap needs no templating
   # ===================================================================
-  - name: "Step 4b: Bootstrap infra AppProjects via GitOps"
-    ansible.builtin.include_role:
-      name: agnosticd.core_workloads.ocp4_workload_gitops_bootstrap
+  - name: "Step 4b: Apply infra AppProjects and platform Application"
+    kubernetes.core.k8s:
+      state: present
+      definition: "{{ lookup('url', 'https://raw.githubusercontent.com/rhpds/ocpsandbox-mcp-with-openshift-gitops/main/infra/bootstrap/appprojects.yaml', split_lines=False) | from_yaml_all | list }}"
 
   # ===================================================================
   # Step 5: ToolHive
